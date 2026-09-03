@@ -46,6 +46,9 @@ const STEP_NAMES := {
 var turn_number: int = 1
 var active_player: int = 0
 var priority_player: int = 0
+## Who was on the play. Kept because going first is a real advantage, so both
+## the AI encoding and the match statistics need to know it.
+var starting_player: int = 0
 
 var current_phase: Phase = Phase.BEGINNING
 var current_step: Step = Step.UNTAP
@@ -137,6 +140,7 @@ func duplicate_state() -> MTGGameState:
 	copy.turn_number = turn_number
 	copy.active_player = active_player
 	copy.priority_player = priority_player
+	copy.starting_player = starting_player
 	copy.current_phase = current_phase
 	copy.current_step = current_step
 	copy.land_played_this_turn = land_played_this_turn

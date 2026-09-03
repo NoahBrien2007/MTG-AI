@@ -26,7 +26,16 @@ var _aborted: bool = false
 
 ## `rng_seed` makes the shuffles reproducible (0 = random). Everything after setup is
 ## deterministic given the action sequence, which training pipelines rely on.
-func setup(deck0_path: String, deck1_path: String, agent0: BaseAgent = null, agent1: BaseAgent = null, rng_seed: int = 0) -> void:
+## `first_player` is who is on the play; alternate it across a series, otherwise
+## one seat carries the first-player advantage in every single game.
+func setup(
+	deck0_path: String,
+	deck1_path: String,
+	agent0: BaseAgent = null,
+	agent1: BaseAgent = null,
+	rng_seed: int = 0,
+	first_player: int = 0
+) -> void:
 	state = MTGGameState.new()
 	var rng := RandomNumberGenerator.new()
 	if rng_seed != 0:
@@ -47,8 +56,9 @@ func setup(deck0_path: String, deck1_path: String, agent0: BaseAgent = null, age
 		p1.draw_card()
 
 	state.turn_number = 1
-	state.active_player = 0
-	state.priority_player = 0
+	state.starting_player = first_player
+	state.active_player = first_player
+	state.priority_player = first_player
 	state.current_phase = MTGGameState.Phase.PRECOMBAT_MAIN
 	state.current_step = MTGGameState.Step.MAIN_1
 
