@@ -82,7 +82,12 @@ func _run_series() -> void:
 	# Probe the value net once up front. Without this a stopped server just
 	# means every ValueNetAgent silently falls back, and the series measures
 	# Greedy against Greedy while claiming to measure the model.
-	if kind_a == "policy" or kind_b == "policy":
+	# PolicySearchAgent extends PolicyAgent, so it needs the same server and was
+	# silently skipping this gate — which matters most for the self-play crank,
+	# where a stopped server means 1000 games of Greedy recorded under the
+	# policy's name.
+	const POLICY_KINDS := ["policy", "policysearch"]
+	if kind_a in POLICY_KINDS or kind_b in POLICY_KINDS:
 		var policy_health := PolicyAgent.new(0).health_check()
 		if not policy_health.get("ok", false):
 			results_label.append_text("[color=#ff8080]%s[/color]\n" % policy_health.get("error", "policy unavailable"))
