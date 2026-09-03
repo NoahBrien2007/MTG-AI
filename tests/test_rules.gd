@@ -24,7 +24,12 @@ func _init() -> void:
 	test_stormchaser_talent()
 	test_boomerang_basics_and_flying()
 	test_state_encoder()
+	test_stack_targets_are_encoded()
+	test_greedy_is_not_paralysed()
 	run_ai_simulation()
+	test_streamed_recording()
+	test_value_net_agent_fallback()
+	test_policy_agent_fallback()
 	print("--- ALL TESTS AND SIMULATIONS COMPLETED SUCCESSFULLY! ---")
 	quit(0)
 
@@ -384,13 +389,194 @@ func test_state_encoder() -> void:
 	print(" -> %d features, %d card slots." % [encoded["features"].size(), encoded["card_ids"].size()])
 
 
+## Regression test for the bug that made Greedy lose 100% of games: on a
+## stack-based engine every proactive action costs a card from hand and pays off
+## only later, so a naive one-action search scored everything at or below
+## "pass priority" and the agent never played a land, spell, attack or block.
+func test_greedy_is_not_paralysed() -> void:
+	print("[Test] Greedy plays proactively (paralysis regression)...")
+	var greedy := GreedyAgent.new(0)
+
+	# 1. With a land in hand and nothing else, play it.
+	var state := _new_session().state
+	_main_phase(state, 0)
+	state.players[0].hand.clear()
+	var island := _to_hand(state, "Island", 0)
+	var chosen := greedy.choose_action(state, _engine.get_legal_actions(state))
+	assert(chosen != null and chosen.action_type == MTGAction.ActionType.PLAY_LAND \
+		and chosen.card_instance_id == island.instance_id,
+		"Greedy should play a land, chose: %s" % str(chosen))
+
+	# 2. With two untapped Islands and a 2-mana creature, start casting it —
+	#    the first step of that plan is tapping a land, which alone gains nothing.
+	state = _new_session().state
+	_main_phase(state, 0)
+	state.players[0].hand.clear()
+	_to_battlefield(state, "Island", 0)
+	_to_battlefield(state, "Island", 0)
+	var hydro := _to_hand(state, "Hydro-Man, Fluid Felon", 0)
+	chosen = greedy.choose_action(state, _engine.get_legal_actions(state))
+	assert(chosen != null and chosen.action_type == MTGAction.ActionType.TAP_LAND,
+		"Greedy should tap toward casting a creature, chose: %s" % str(chosen))
+
+	# Play the plan out: it must reach the cast rather than stalling.
+	var guard := 0
+	while chosen != null and chosen.action_type == MTGAction.ActionType.TAP_LAND and guard < 6:
+		state = _engine.apply_action(state, chosen)
+		chosen = greedy.choose_action(state, _engine.get_legal_actions(state))
+		guard += 1
+	assert(chosen != null and chosen.action_type == MTGAction.ActionType.CAST_SPELL \
+		and chosen.card_instance_id == hydro.instance_id,
+		"Greedy should cast the creature after tapping, chose: %s" % str(chosen))
+
+	# 3. With a creature able to attack into an empty board, attack.
+	state = _new_session().state
+	state.players[0].hand.clear()
+	_to_battlefield(state, "Eddymurk Crab", 0)
+	state.current_phase = MTGGameState.Phase.COMBAT
+	state.current_step = MTGGameState.Step.DECLARE_ATTACKERS
+	_main_phase_players(state, 0)
+	chosen = greedy.choose_action(state, _engine.get_legal_actions(state))
+	assert(chosen != null and chosen.action_type == MTGAction.ActionType.DECLARE_ATTACKERS \
+		and not chosen.attacker_ids.is_empty(),
+		"Greedy should attack with a 5/5 into an empty board, chose: %s" % str(chosen))
+
+	# 4. Facing a lethal-ish attacker it can eat for free, block.
+	state = _new_session().state
+	state.players[1].hand.clear()
+	var attacker := _to_battlefield(state, "Slickshot Show-Off", 0)  # 1/2 flier
+	_to_battlefield(state, "Eddymurk Crab", 1)                       # 5/5 ground: cannot block a flier
+	_to_battlefield(state, "Slickshot Show-Off", 1)                  # 1/2 flier: can block
+	state.current_phase = MTGGameState.Phase.COMBAT
+	state.current_step = MTGGameState.Step.DECLARE_BLOCKERS
+	state.active_player = 0
+	state.priority_player = 1
+	state.declared_attackers = [attacker.instance_id]
+	var blocking_greedy := GreedyAgent.new(1)
+	chosen = blocking_greedy.choose_action(state, _engine.get_legal_actions(state))
+	assert(chosen != null and chosen.action_type == MTGAction.ActionType.DECLARE_BLOCKER,
+		"Greedy should block an attacker it can survive, chose: %s" % str(chosen))
+	print(" -> Greedy plays lands, casts, attacks and blocks.")
+
+
 func run_ai_simulation() -> void:
 	print("[Test] AI self-play simulation...")
 	var recorder := GameRecorder.new()
 	var results := MatchRunner.new_results()
-	for i in range(3):
-		var final_state := MatchRunner.play_game(HeuristicAgent.new(0), GreedyAgent.new(1), DECK, DECK, 3000, recorder, 100 + i)
+	var games := 6
+	for i in range(games):
+		# Alternate who is on the play so neither seat keeps the first-player edge.
+		var final_state := MatchRunner.play_game(
+			HeuristicAgent.new(0), GreedyAgent.new(1), DECK, DECK, 3000, recorder, 100 + i, i % 2
+		)
 		MatchRunner.record_result(results, final_state)
 	print(MatchRunner.summary_text(results, "Heuristic", "Greedy"))
-	assert(recorder.games_recorded == 3 and not recorder.samples.is_empty(), "Recorder should have captured decisions!")
+	assert(recorder.games_recorded == games and not recorder.samples.is_empty(), "Recorder should have captured decisions!")
+	assert(results["wins_p0"] + results["wins_p1"] + results["draws"] == games, "Every game should have a result!")
 	print(" -> Recorded %d decisions." % recorder.samples.size())
+
+	# Recordings belong in the project (ai/training/datasets/), where the Python
+	# trainer looks for them — not in the OS user-data folder.
+	var decisions := recorder.decisions_recorded
+	var saved := recorder.save("test_recording.jsonl")
+	var expected := ProjectSettings.globalize_path(GameRecorder.PROJECT_OUTPUT_DIR)
+	assert(saved.begins_with(expected), "Recordings must be written inside the project, got: %s" % saved)
+	var lines := FileAccess.get_file_as_string(saved).split("\n", false)
+	assert(lines.size() == decisions + 1, "Saved file should hold a header plus one line per decision!")
+	var first: Dictionary = JSON.parse_string(lines[1])
+	assert(first.has("game"), "Every sample needs a game id or the trainer's train/val split collapses!")
+	print(" -> Saved to %s" % saved)
+	DirAccess.remove_absolute(saved)
+
+
+func test_streamed_recording() -> void:
+	print("[Test] Streamed recording (long-series path)...")
+	var recorder := GameRecorder.new()
+	var stem := "test_stream"
+	var folder := recorder.begin_stream(stem)
+	assert(folder.begins_with(ProjectSettings.globalize_path(GameRecorder.PROJECT_OUTPUT_DIR)),
+		"Streamed recordings must go to the project dataset folder, got: %s" % folder)
+	for i in range(3):
+		MatchRunner.play_game(
+			HeuristicAgent.new(0), GreedyAgent.new(1), DECK, DECK, 3000, recorder, 200 + i, i % 2
+		)
+	recorder.save()
+	# Streaming keeps nothing in memory — that is the whole point of it.
+	assert(recorder.samples.is_empty(), "Streaming should not buffer samples in memory!")
+	assert(recorder.written_files.size() == 1, "Three games should fit in one shard!")
+	var written := recorder.written_files[0]
+	var lines := FileAccess.get_file_as_string(written).split("\n", false)
+	assert(lines.size() == recorder.decisions_recorded + 1, "Streamed file should hold every decision!")
+	var games := {}
+	for i in range(1, lines.size()):
+		games[JSON.parse_string(lines[i])["game"]] = true
+	assert(games.size() == 3, "Samples should carry one distinct game id per game, got %d" % games.size())
+	print(" -> %d decisions from 3 games streamed to %s" % [recorder.decisions_recorded, written])
+	DirAccess.remove_absolute(written)
+
+
+func test_value_net_agent_fallback() -> void:
+	print("[Test] ValueNetAgent survives a stopped server...")
+	var agent := ValueNetAgent.new(0)
+	# Nothing listens here; the real server is on 8787.
+	agent.port = 8799
+	var health := agent.health_check()
+	assert(not health["ok"], "health_check must fail when no server is running!")
+
+	# A dead server must not abort a series — the agent falls back to the
+	# inherited heuristic and the game still finishes.
+	var session := GameSession.new()
+	session.setup(DECK, DECK, agent, HeuristicAgent.new(1), 4242)
+	var final_state := session.run_sync()
+	assert(agent.offline, "Agent should mark itself offline after the first failed call!")
+	assert(agent.requests_made == 0, "Nothing should have been scored by a server that is not there!")
+	assert(final_state.game_over, "The game should still finish on the fallback evaluation!")
+	print(" -> Fell back cleanly and finished a %d-turn game." % final_state.turn_number)
+
+
+## Regression test for the bug that made the value net burn its own face. The
+## state encoder had no representation of what a spell on the stack was aimed
+## at, so "Burst Lightning at the opponent" and "Burst Lightning at my own
+## face" encoded identically — the model could not prefer one, the scores tied,
+## and the search took whichever plan came first.
+func test_stack_targets_are_encoded() -> void:
+	print("[Test] Stack targets change the encoding...")
+	var state := _new_session().state
+	_main_phase(state, 0)
+	var bolt := _to_hand(state, "Burst Lightning", 0)
+	state.players[0].add_mana("R", 1)
+
+	var at_me: MTGAction = null
+	var at_them: MTGAction = null
+	for a in _engine.get_legal_actions(state):
+		if a.action_type != MTGAction.ActionType.CAST_SPELL or a.card_instance_id != bolt.instance_id or a.kicked:
+			continue
+		if a.target_player() == 0:
+			at_me = a
+		elif a.target_player() == 1:
+			at_them = a
+	assert(at_me != null and at_them != null, "Burst Lightning should be castable at either player!")
+
+	var mine: PackedFloat32Array = StateEncoder.encode(_engine.apply_action(state, at_me), 0)["features"]
+	var theirs: PackedFloat32Array = StateEncoder.encode(_engine.apply_action(state, at_them), 0)["features"]
+	assert(mine.size() == StateEncoder.feature_count() and theirs.size() == StateEncoder.feature_count(),
+		"Both encodings should be the declared length!")
+	assert(mine != theirs, "A spell aimed at my own face must not encode identically to one aimed at the opponent!")
+	print(" -> Verified: %d features, self-target and opponent-target differ." % mine.size())
+
+
+func test_policy_agent_fallback() -> void:
+	print("[Test] PolicyAgent survives a stopped server...")
+	var agent := PolicyAgent.new(0)
+	# Nothing listens here; the real server is on 8787.
+	agent.net.port = 8799
+	var health := agent.health_check()
+	assert(not health["ok"], "health_check must fail when no server is running!")
+
+	var session := GameSession.new()
+	session.setup(DECK, DECK, agent, GreedyAgent.new(1), 5150)
+	var final_state := session.run_sync()
+	assert(agent.offline, "Agent should mark itself offline after the first failed call!")
+	assert(agent.decisions == 0, "Nothing should have been decided by a server that is not there!")
+	assert(final_state.game_over, "The game should still finish on the fallback search!")
+	print(" -> Fell back cleanly and finished a %d-turn game." % final_state.turn_number)
