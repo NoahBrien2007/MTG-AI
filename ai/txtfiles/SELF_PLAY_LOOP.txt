@@ -1,0 +1,220 @@
+MTG AI PLAYER
+IMPROVING THE POLICY: THE SELF-PLAY LOOP
+Written 2026-09-03. Companion to ai/HANDOFF.md.
+
+======================================================================
+0. THE SHORT ANSWER
+======================================================================
+
+Do NOT record the policy playing against itself.
+
+Record POLICY + SEARCH on both sides, then train the policy on those
+games. The search is the teacher; the bare policy is the student.
+
+Everything below is why, and how.
+
+======================================================================
+1. WHY POLICY vs POLICY DOES NOTHING
+======================================================================
+
+Training a model on its own choices means the labels ARE what the model
+already outputs. Three things follow:
+
+  - Agreement climbs toward 100%, because it is agreeing with itself.
+  - The gradient goes to nearly zero on every decision it already gets
+    right, which is most of them.
+  - The win rate does not move.
+
+No new information enters the system. 500 games and an hour of training
+buys nothing but sharper versions of the opinions already held.
+
+A learning loop needs a teacher STRONGER than the student. The whole
+trick is finding one that is free.
+
+======================================================================
+2. WHAT TO RECORD INSTEAD: THE GAP
+======================================================================
+
+Measured 2026-09-03, 100 games vs Greedy, seats alternated, +/-5%:
+
+    policy alone           23%     the student, one forward pass
+    policy + search (d2)   53%     the teacher, same network + minimax
+                           ----
+                           30 points of gap
+
+The search plays better than the network inside it because it actually
+looks at what happens next. That 30-point gap is the improvement signal.
+
+The loop:
+
+    record the SEARCH's decisions
+         |
+         v
+    train the network to reproduce them in one forward pass
+         |
+         v
+    the network inherits search strength for free
+         |
+         v
+    put search on top of the BETTER network
+         |
+         v
+    stronger still  ->  record again
+
+Same shape as AlphaZero's policy improvement step. Note that everything
+before this point was capped at Greedy's strength by construction; this
+is the first loop that is not.
+
+======================================================================
+3. ONE TURN OF THE CRANK, STEP BY STEP
+======================================================================
+
+STEP 1 - Get the previous generation's games out of the way.
+---------------------------------------------------------------
+data.py discovers files with rglob("*.jsonl") - it RECURSES. Moving the
+old set into ai/training/datasets/gen0_greedy/ does NOT hide it from a
+bare `python -m mtgai.policy`. You would silently be back to training on
+two teachers that disagree, which is the exact problem the single-teacher
+retrain was meant to fix.
+
+Two ways out, pick one and stick to it:
+
+  a) Always pass an explicit glob. Never run `python -m mtgai.policy`
+     with no arguments again.
+  b) Keep archived generations in ai/training/archive/ (gitignored),
+     outside the datasets/ tree, so a bare run means "the current
+     generation" and nothing else.
+
+STEP 2 - Serve the current checkpoint and confirm it.
+---------------------------------------------------------------
+    cd ai/python && source .venv/bin/activate
+    python -m mtgai.serve --policy-checkpoint checkpoints/policy_net.pt
+    curl -s localhost:8787/health
+        -> "policy": true, "feature_count": 1295
+
+A stopped or half-loaded server does not fail. It plays as Greedy and
+still reports a win rate. Check, every time.
+
+STEP 3 - Record 500 games, not 1000.
+---------------------------------------------------------------
+Training screen -> both agents "Policy + Search AI" -> tick Record -> Run.
+
+There is a network round trip per decision plus a depth-2 search, so this
+is much slower per game than Greedy was. Run 500, look at the elapsed
+time, then decide whether 1000 is worth it.
+
+The Training screen health-gates policysearch as of commit afcd3ac. Before
+that it only gated "policy" and "valuenet", so a dead server started the
+series anyway and recorded 500 games of Greedy under the policy's name.
+
+STEP 4 - Retrain on ONLY the new set, into its own folder.
+---------------------------------------------------------------
+    python -m mtgai.policy ../training/datasets/games_<new-stamp>*.jsonl \
+      --max-per-game 120 --epochs 60 --out-dir checkpoints/gen1
+
+Its target is now an agent that searched, so the policy inherits search
+strength in one forward pass.
+
+STEP 5 - Serve gen1, then measure.
+---------------------------------------------------------------
+    python -m mtgai.serve --policy-checkpoint checkpoints/gen1/policy_net.pt
+    godot --headless -s tests/sweep_blend.gd -- 100
+
+The number that matters is the `policy` row: it should land well above
+23%, because its teacher searched. Then `policy+search` on top of it
+should beat 53%.
+
+The sweep writes its rows into data/ai_stats.json, so the AI Stats screen
+shows the new numbers with no further work.
+
+STEP 6 - Repeat from step 1.
+---------------------------------------------------------------
+
+======================================================================
+4. TRAPS
+======================================================================
+
+4.1 THE AGENTS ARE COMPLETELY DETERMINISTIC
+-------------------------------------------
+There is no temperature, no noise, no epsilon anywhere in
+policy_agent.gd, policy_search_agent.gd or greedy_agent.gd. Given the
+same position they always play the same move, so the ONLY source of
+variety in self-play is the shuffle. The network keeps seeing its own
+favourite lines and never sees the alternatives.
+
+This is why AlphaZero adds Dirichlet noise at the root and samples early
+moves instead of taking the argmax.
+
+If a cycle stops improving, THIS is the first thing to add - not more
+games. Sample the root move from the top-K for the first few turns, in
+recording mode only, so measurement stays deterministic.
+
+4.2 MEASURE AGAINST GREEDY, NEVER THE PREVIOUS GENERATION
+----------------------------------------------------------
+Greedy is a fixed yardstick. "gen2 beats gen1" can keep reading as
+progress while both drift downward in absolute terms. Keep the control in
+every sweep.
+
+4.3 THE CONTROL IS CURRENTLY READING 56%
+-----------------------------------------
+Greedy self-play should sit on 50%. It read 56% on 2026-09-03. At +/-5%
+standard error that is ~1.2 sigma, so probably noise - but it is the
+CONTROL, and every other row on the sweep inherits any tilt it has. Run
+`sweep_blend.gd -- 300` once and check it settles before trusting
+generation-to-generation comparisons.
+
+4.4 A CHECKPOINT AND ai/training/vocabulary.json TRAVEL TOGETHER
+-----------------------------------------------------------------
+Card ids are assigned in first-encountered order. The Godot StateEncoder
+reads vocabulary.json at startup; the model expects the ordering baked
+into its own spec. If they disagree, every card id is wrong and nothing
+says so - /health compares feature_count only, not the vocabulary.
+
+Both are in git, so commit them in the same commit and they cannot drift
+across machines. Serve one checkpoint at a time. An opponent pool of
+several generations in one process is NOT safe until /health also checks
+the vocabulary.
+
+4.5 DATASETS ARE NOT IN GIT
+----------------------------
+1.6 GB per 1000 games. Checkpoints are committed and datasets are not, so
+on a second machine you can serve, play and measure - but retraining
+needs a local recording.
+
+======================================================================
+5. WHEN TO STOP
+======================================================================
+
+Stop when a full cycle does not move the win rate.
+
+Before concluding the loop is exhausted, check in this order:
+
+  1. Was the server actually up? (net calls > 0 on the sweep rows)
+  2. Was the greedy control near 50%?
+  3. Is exploration the bottleneck? (see 4.1)
+  4. Is POLICY_TOP_K too wide? Top-3 already held the right move 97.4% of
+     the time. As agreement rises, narrower and deeper beats wider and
+     shallower.
+
+After that, the honest next moves are the ones in HANDOFF.md: the value
+net as a leaf evaluator inside the search, more decks, and hidden
+information - the search currently assumes the opponent's hand is known.
+
+======================================================================
+6. WORKING ON TWO MACHINES
+======================================================================
+
+Committed, so it travels:  checkpoints (*.pt, ~250 KB each), the
+                           history JSONs, ai/training/vocabulary.json,
+                           data/ai_stats.json
+NOT committed:             ai/training/datasets/*.jsonl (1.6 GB/1000 games)
+
+At the other machine:
+
+    git pull
+    cd ai/python && source .venv/bin/activate
+    pip install -r requirements.txt        # first time only
+    python -m mtgai.serve --policy-checkpoint checkpoints/policy_net.pt
+
+Do not retrain and then pull, or you will be resolving a binary conflict
+on a .pt file. Pull first, then train.
