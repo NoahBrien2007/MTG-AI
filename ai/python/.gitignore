@@ -1,4 +1,8 @@
-checkpoints/
+# NOT `checkpoints/` — excluding the directory makes it impossible to re-include
+# anything inside it, whatever the root .gitignore says. The trained checkpoints
+# are ~250 KB each and are tracked on purpose, so a model can be served on
+# another machine without retraining. Big exports still stay out.
+checkpoints/**/*.onnx
 *.onnx
 __pycache__/
 *.py[cod]
