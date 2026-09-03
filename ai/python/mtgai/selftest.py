@@ -38,7 +38,7 @@ def test_spec() -> None:
     print("spec")
     spec = EncodingSpec()
     check(spec.total_slots == 37, "37 card slots (10 hand + 12 + 12 battlefield + 3 stack)")
-    check(spec.feature_count == 1109, f"1109 features, got {spec.feature_count}")
+    check(spec.feature_count == 1110, f"1110 features, got {spec.feature_count}")
     check([name for name, _, _ in spec.zone_bounds()][1] == "my_battlefield", "zone order")
 
     spec = EncodingSpec()
@@ -129,6 +129,19 @@ def test_dataset_round_trip() -> None:
         check(len(train) + len(val) == len(merged), "the split loses no samples")
 
 
+def test_degenerate_dataset_warning() -> None:
+    print("degenerate dataset detection")
+    samples = synthetic_samples(games=30, seed=13)
+    rates = samples.seat_win_rates()
+    check(abs(sum(rates.values()) - 1.0) < 1e-9, "seat win rates sum to 1")
+    check(max(rates.values()) < 0.95, f"balanced data is not flagged (max {max(rates.values()):.2f})")
+
+    # One seat wins every game — what a broken agent produces.
+    samples.targets = np.where(samples.players == 0, 1.0, 0.0).astype(np.float32)
+    check(samples.seat_win_rates()[0] == 1.0, "a one-sided dataset reports a 100% seat win rate")
+    check("WARNING" in samples.describe(), "describe() warns about a one-sided dataset")
+
+
 def test_checkpoint_round_trip() -> None:
     print("checkpoints")
     samples = synthetic_samples(games=5, seed=7)
@@ -185,6 +198,7 @@ def main() -> int:
         test_model_shapes,
         test_permutation_invariance,
         test_dataset_round_trip,
+        test_degenerate_dataset_warning,
         test_checkpoint_round_trip,
         test_metrics,
         test_learning,

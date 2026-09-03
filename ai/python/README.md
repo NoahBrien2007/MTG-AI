@@ -20,10 +20,12 @@ and serves that checkpoint to Godot.
 
 ```bash
 cd ai/python
-python -m venv .venv && .venv\Scripts\activate      # Windows
+python3 -m venv .venv
+source .venv/bin/activate         # macOS / Linux
+# .venv\Scripts\activate          # Windows — run this instead, on its own line
 pip install -r requirements.txt
 
-python -m mtgai.selftest          # 27 checks, no data needed (~15 s)
+python -m mtgai.selftest          # 31 checks, no data needed (~15 s)
 python -m mtgai.train             # trains on ../training/datasets/*.jsonl
 python -m mtgai.evaluate          # calibration + accuracy report
 python -m mtgai.serve             # http://127.0.0.1:8787 for a Godot agent
@@ -32,6 +34,20 @@ python -m mtgai.serve             # http://127.0.0.1:8787 for a Godot agent
 No recordings yet? In the game: **AI Training** → tick *Record training data* →
 **Run**. A few hundred games is a reasonable first dataset; Heuristic vs Greedy
 gives more varied positions than either agent against itself.
+
+**Check the seat win rate before you train.** `train` and `evaluate` print it:
+
+```
+seat win rate: player 0 52.3%, player 1 47.7%
+```
+
+Anything past roughly 65/35 between two agents that are supposed to be
+comparable means something is wrong — most likely one agent is not playing at
+all. Note that the win/loss *decision* counts stay near 50/50 even then, because
+each outcome is recorded relative to whoever was deciding, so they cannot tell
+you this. At 95/5 the loader refuses to be quiet about it: a value network
+trained on one-sided games learns "the seat that does things wins" and nothing
+about play decisions.
 
 To check the pipeline before generating real data:
 
@@ -52,7 +68,8 @@ python -m mtgai.train --smoke-test     # synthetic games, ~2 s
 | `train.py` | training entry point |
 | `evaluate.py` | scores a checkpoint against a dataset |
 | `export_onnx.py` | exports to ONNX for use outside Python |
-| `serve.py` | localhost HTTP server so a Godot agent can query the model |
+| `policy.py` | `PolicyNet` — which action to take — plus its loader and training |
+| `serve.py` | localhost HTTP server so a Godot agent can query the models |
 | `vocab.py` | writes `ai/training/vocabulary.json` for the Godot encoder |
 | `testdata.py` | synthetic datasets |
 | `selftest.py` | self-checks for all of the above |
@@ -61,9 +78,9 @@ python -m mtgai.train --smoke-test     # synthetic games, ~2 s
 
 ## The model
 
-The state vector is 1109 floats, but it is not a flat blob: 36 numbers describe
-the game as a whole (life totals, mana, phase, zone sizes) and the remaining
-1073 are 37 **card slots** of 29 numbers each — 10 for your hand, 12 for each
+The state vector is 1110 floats, but it is not a flat blob: 37 numbers describe
+the game as a whole (life totals, mana, phase, zone sizes, who is on the play)
+and the remaining 1073 are 37 **card slots** of 29 numbers each — 10 for your hand, 12 for each
 battlefield, 3 for the stack.
 
 Feeding that flat into an MLP wastes capacity, because slot 3 of your
@@ -75,7 +92,7 @@ card slot (29 floats) ─┐
 card name → embedding ─┘                                    │
                                                             ├─ pool per zone (mean + max
                                                             │   over occupied slots)
-global features (36) ───────────────────────────────────────┴─→ trunk → 1 logit → sigmoid
+global features (37) ───────────────────────────────────────┴─→ trunk → 1 logit → sigmoid
 ```
 
 Three things fall out of that shape:
@@ -134,7 +151,7 @@ python -m mtgai.serve
 
 ```
 POST /value
-{"states": [{"features": [...1109 floats...], "card_ids": [...37 ints...]}, ...]}
+{"states": [{"features": [...1110 floats...], "card_ids": [...37 ints...]}, ...]}
 → {"values": [0.61, 0.48, ...]}
 ```
 
@@ -142,6 +159,14 @@ Send one request per decision containing every candidate state, not one request
 per state — a searching agent evaluates every legal action, and the round trip
 dominates the cost. A `ValueNetAgent` on the Godot side then looks like
 `GreedyAgent` with `_evaluate_state()` replaced by a lookup into the response.
+
+The Godot side of this is `scripts/ai/value_net_agent.gd` — `GreedyAgent` with
+`_evaluate_state()` replaced by a batched call to `/value`, selectable as
+**Value Net AI** in the Training screen and as an opponent in a normal game.
+Start `serve` first; the Training screen probes `/health` before a series and
+refuses to run without it, so a stopped server can never be mistaken for a weak
+model. If the server dies mid-series the agent warns once and finishes on the
+inherited heuristic — check the log for that warning before trusting a result.
 
 `python -m mtgai.export_onnx` writes `ai/models/value_net.onnx` plus a sidecar
 `.json` with the encoding spec, for when you would rather run inference inside
@@ -155,7 +180,7 @@ onnxscript`; the HTTP path does not.)
 One JSON object per line. Line 1 is the header:
 
 ```json
-{"format": "mtg-ai-samples-v1", "feature_count": 1109, "global_features": 36,
+{"format": "mtg-ai-samples-v1", "feature_count": 1110, "global_features": 37,
  "card_features": 29, "action_features": 19,
  "slots": {"hand": 10, "battlefield": 12, "stack": 3},
  "vocabulary": ["", "Island", "Opt", ...], "games": 200}
@@ -165,7 +190,7 @@ Every following line is one decision:
 
 | field | meaning |
 | --- | --- |
-| `features` | the state vector, from the acting player's view |
+| `features` | the state vector, from the acting player's view (includes an "I am on the play" flag) |
 | `card_ids` | one vocabulary index per card slot (0 = empty) |
 | `legal` | one action vector per legal action |
 | `legal_signatures` | canonical string per legal action |
@@ -179,10 +204,41 @@ same files later.
 
 ---
 
+## The policy network
+
+`value_net.pt` answers "am I winning". `policy_net.pt` answers "what should I
+play", and it is the one that picks moves well.
+
+The difference is supervision. Outcome training labels every decision in a game
+with that game's single result, so 2,000 games are 2,000 real signals spread
+over 650,000 rows — measured here, the value net stopped improving after one or
+two epochs however it was regularised, and playing greedily on it lost 94 games
+in 100 against the agent that produced its data. `chosen` labels each decision
+individually against the ~25 other legal actions of that same position: the
+same files, three hundred times the supervision, aimed at the actual question.
+
+```bash
+python -m mtgai.policy --smoke-test    # synthetic, should approach 100%
+python -m mtgai.policy                 # trains on ../training/datasets
+python -m mtgai.serve --policy-checkpoint checkpoints/policy_net.pt
+```
+
+Watch **agreement**: the share of held-out positions where the network picks
+the same move as the agent that recorded them. Chance is about 4%. The
+`--max-per-game` flag exists because the whole dataset with its padded action
+matrices needs several gigabytes; decisions inside one game are near-duplicates
+anyway, so sampling costs little.
+
+A policy trained this way tops out at the strength of whoever recorded. What it
+buys is the move ordering that makes real search affordable — thirty candidates
+narrowed to three worth looking at.
+
 ## What comes after this
 
-1. **Wire it up.** A `ValueNetAgent` in Godot that calls `/value`. Measure it
-   against Greedy on the Training screen — that number is the whole point.
+1. **Measure it.** `ValueNetAgent` exists; run it against Greedy on the Training
+   screen, ~200 games, recording off. That win rate is the whole point — if the
+   model does not beat the formula whose games it was trained on, more epochs
+   will not fix it.
 2. **Deeper search.** With a value function, 2–3 ply beats 1 ply substantially.
    `duplicate_state()` already makes lookahead cheap.
 3. **Self-play.** Once the network beats Greedy, generate data by playing it
