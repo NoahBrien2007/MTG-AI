@@ -58,6 +58,11 @@ custom_minimum_size = Vector2(280, 52)
 layout_mode = 2
 text = "AI Training"
 
+[node name="BtnAIStats" type="Button" parent="Center/VBox"]
+custom_minimum_size = Vector2(280, 52)
+layout_mode = 2
+text = "AI Stats"
+
 [node name="BtnQuit" type="Button" parent="Center/VBox" unique_id=1335704491]
 custom_minimum_size = Vector2(280, 40)
 layout_mode = 2

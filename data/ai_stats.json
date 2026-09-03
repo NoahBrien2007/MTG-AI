@@ -1,0 +1,187 @@
+{
+  "format": "mtg-ai-stats-v1",
+  "_comment": "Prose is hand-written; the results blocks are rewritten by tests/sweep_blend.gd. Keep agent ids in step with GameConfig.AGENT_TYPES.",
+  "measured": {
+    "date": "2026-09-03",
+    "games": 100,
+    "opponent": "Greedy AI (1-ply search)",
+    "harness": "tests/sweep_blend.gd -- 100",
+    "standard_error": 0.05,
+    "note": "One Izzet list mirrored, 19 distinct cards, seats alternated. A model trained on one matchup knows one matchup."
+  },
+  "agents": [
+    {
+      "id": "policysearch",
+      "requires": "policy",
+      "summary": "The policy proposes, the search disposes. The network narrows ~30 legal actions to 4, then Greedy's evaluator searches those 4 two plies deep. One network call per decision, at the root only.",
+      "results": [
+        {
+          "label": "depth 2",
+          "win_rate": 0.53,
+          "games": 100
+        },
+        {
+          "label": "depth 1",
+          "win_rate": 0.49,
+          "games": 100
+        }
+      ],
+      "capabilities": [
+        "Learned move ordering plus real minimax — currently the strongest agent here",
+        "Cheap where it counts: 4 candidates at depth 2 cost less than 30 at depth 1",
+        "Falls back to Greedy if the server dies, and warns once"
+      ],
+      "limits": [
+        "Needs mtgai.serve --policy-checkpoint",
+        "Assumes the opponent's hand is known — the search cheats at hidden information",
+        "Its policy filter is capped by whoever recorded the training games"
+      ],
+      "metrics": {
+        "Policy top-1 / top-3": "87.7% / 97.4%",
+        "Root candidates": "4 of ~30 legal",
+        "Replies per node": "6",
+        "Network calls": "1 per decision"
+      }
+    },
+    {
+      "id": "greedy",
+      "requires": "",
+      "summary": "One-ply search over plans on a hand-written formula: life, board power, card count, mana development. Simulates each plan (land taps + cast) to the end and scores it there, after resolving the stack.",
+      "results": [
+        {
+          "label": "self-play control",
+          "win_rate": 0.53,
+          "games": 100
+        }
+      ],
+      "capabilities": [
+        "The baseline every other agent is measured against, and the fallback for all of them",
+        "Resolving the stack before judging (quiescence) is worth ~17 points on its own",
+        "No server, no checkpoint, no training data"
+      ],
+      "limits": [
+        "Judges positions poorly in the abstract, and is inverted before turn 7",
+        "Cannot improve — every gain has to be hand-written",
+        "One ply: never sees the reply to its own move"
+      ],
+      "metrics": {
+        "Position ranking (AUC)": "0.656 overall, 0.341 before turn 7",
+        "Search": "1 ply over plans, with quiescence",
+        "Network calls": "none"
+      }
+    },
+    {
+      "id": "policy",
+      "requires": "policy",
+      "summary": "Asks the network which of the legal actions a strong player would take, and plays it. One forward pass, no search at all.",
+      "results": [
+        {
+          "label": "single pass",
+          "win_rate": 0.17,
+          "games": 100
+        }
+      ],
+      "capabilities": [
+        "Trained on the question it is actually asked — which move, given these alternatives",
+        "Roughly 300x the supervision of outcome training, from the same recordings",
+        "Fast: one small request per decision, state encoded once"
+      ],
+      "limits": [
+        "17% against the agent it imitates — pure imitation compounds its own errors",
+        "Its ceiling is the strength of whoever recorded the games",
+        "Best used as a filter for search, not as a picker"
+      ],
+      "metrics": {
+        "Agreement with teacher": "87.7% (chance 29.4%)",
+        "Top-3 agreement": "97.4%",
+        "Search": "none",
+        "Network calls": "1 per decision"
+      }
+    },
+    {
+      "id": "heuristic",
+      "requires": "",
+      "summary": "Fixed rule priorities — play a land, cast the biggest thing affordable, attack, block. No search and no simulation.",
+      "results": [
+        {
+          "label": "vs Greedy",
+          "win_rate": 0.37,
+          "games": 0,
+          "estimate": true
+        }
+      ],
+      "capabilities": [
+        "Instant decisions, useful for smoke tests and a varied opponent",
+        "Produces more varied positions than either agent against itself"
+      ],
+      "limits": [
+        "Never simulates the result of a move",
+        "Not a valid recording teacher — a model learns 'which agent made this board' from lopsided matchups"
+      ],
+      "metrics": {
+        "Search": "none — rule priorities",
+        "Network calls": "none"
+      }
+    },
+    {
+      "id": "valuenet",
+      "requires": "value",
+      "summary": "Greedy's search with the formula replaced by a network answering 'what is P(the player about to act wins)'. Kept for reference: it judges positions well and picks moves terribly.",
+      "results": [
+        {
+          "label": "1 ply",
+          "win_rate": 0.06,
+          "games": 100
+        },
+        {
+          "label": "2 ply",
+          "win_rate": 0.03,
+          "games": 100
+        },
+        {
+          "label": "mixed with formula",
+          "win_rate": 0.17,
+          "games": 100
+        }
+      ],
+      "capabilities": [
+        "Ranks positions better than the hand-written formula: 0.800 AUC vs 0.656",
+        "Permutation-invariant over card slots, with a learned embedding per card name",
+        "Worth retrying as a leaf evaluator inside a deeper search, where it is only ever asked to judge"
+      ],
+      "limits": [
+        "6% as a move picker — ranking different positions and ranking the successors of one position are different skills",
+        "Outcome training gives one real label per ~300 decisions; every run peaked at epoch 1-2",
+        "Needs mtgai.serve --checkpoint"
+      ],
+      "metrics": {
+        "Position ranking (AUC)": "0.800 (formula: 0.656)",
+        "Training signal": "1 label per ~300 decisions",
+        "Best epoch": "1-2 in every run",
+        "Parameters": "~186k"
+      }
+    },
+    {
+      "id": "random",
+      "requires": "",
+      "summary": "Picks uniformly from the legal actions. The floor — anything that cannot beat this is broken.",
+      "results": [
+        {
+          "label": "vs Greedy",
+          "win_rate": null,
+          "games": 0
+        }
+      ],
+      "capabilities": [
+        "Proves the rules engine can finish a game from any sequence of legal actions"
+      ],
+      "limits": [
+        "Plays no Magic whatsoever"
+      ],
+      "metrics": {
+        "Search": "none",
+        "Network calls": "none"
+      }
+    }
+  ]
+}

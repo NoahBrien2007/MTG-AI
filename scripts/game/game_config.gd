@@ -6,6 +6,7 @@ extends Node
 const SCENE_MAIN_MENU := "res://scenes/MainMenu.tscn"
 const SCENE_DECK_SELECT := "res://scenes/DeckSelect.tscn"
 const SCENE_TRAINING := "res://scenes/Training.tscn"
+const SCENE_AI_STATS := "res://scenes/AIStats.tscn"
 const SCENE_GAME := "res://scenes/Game.tscn"
 
 const DECK_DIR := "res://data/decks"
