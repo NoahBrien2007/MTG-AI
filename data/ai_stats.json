@@ -18,12 +18,14 @@
         {
           "label": "depth 2",
           "win_rate": 0.53,
-          "games": 100
+          "games": 100,
+          "date": "2026-09-03"
         },
         {
           "label": "depth 1",
-          "win_rate": 0.49,
-          "games": 100
+          "win_rate": 0.46,
+          "games": 100,
+          "date": "2026-09-03"
         }
       ],
       "capabilities": [
@@ -50,8 +52,9 @@
       "results": [
         {
           "label": "self-play control",
-          "win_rate": 0.53,
-          "games": 100
+          "win_rate": 0.56,
+          "games": 100,
+          "date": "2026-09-03"
         }
       ],
       "capabilities": [
@@ -77,8 +80,9 @@
       "results": [
         {
           "label": "single pass",
-          "win_rate": 0.17,
-          "games": 100
+          "win_rate": 0.23,
+          "games": 100,
+          "date": "2026-09-03"
         }
       ],
       "capabilities": [
