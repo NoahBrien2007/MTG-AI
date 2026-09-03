@@ -78,16 +78,16 @@ python -m mtgai.train --smoke-test     # synthetic games, ~2 s
 
 ## The model
 
-The state vector is 1110 floats, but it is not a flat blob: 37 numbers describe
+The state vector is 1295 floats, but it is not a flat blob: 37 numbers describe
 the game as a whole (life totals, mana, phase, zone sizes, who is on the play)
-and the remaining 1073 are 37 **card slots** of 29 numbers each — 10 for your hand, 12 for each
+and the remaining 1258 are 37 **card slots** of 34 numbers each — 10 for your hand, 12 for each
 battlefield, 3 for the stack.
 
 Feeding that flat into an MLP wastes capacity, because slot 3 of your
 battlefield means exactly what slot 7 means. So instead:
 
 ```
-card slot (29 floats) ─┐
+card slot (34 floats) ─┐
                        ├─→ shared card encoder → 64 floats ─┐
 card name → embedding ─┘                                    │
                                                             ├─ pool per zone (mean + max
@@ -106,6 +106,11 @@ Three things fall out of that shape:
 * **Masking.** The first feature of each slot is a "card is here" flag; empty
   slots are zeroed before pooling and excluded from the mean, so an empty board
   is not the same as a board full of 0/0s.
+
+The slot width is `CARD_FEATURES` in `scripts/ai/state_encoder.gd`, and it is
+load-bearing: changing it changes `feature_count`, which invalidates every
+recording and every checkpoint made before the change. `/health` compares the
+two and refuses rather than playing badly.
 
 ~186k parameters by default. Training on a few thousand decisions takes seconds
 on a CPU; there is no reason to reach for a GPU until self-play datasets get
@@ -151,7 +156,7 @@ python -m mtgai.serve
 
 ```
 POST /value
-{"states": [{"features": [...1110 floats...], "card_ids": [...37 ints...]}, ...]}
+{"states": [{"features": [...1295 floats...], "card_ids": [...37 ints...]}, ...]}
 → {"values": [0.61, 0.48, ...]}
 ```
 
@@ -180,8 +185,8 @@ onnxscript`; the HTTP path does not.)
 One JSON object per line. Line 1 is the header:
 
 ```json
-{"format": "mtg-ai-samples-v1", "feature_count": 1110, "global_features": 37,
- "card_features": 29, "action_features": 19,
+{"format": "mtg-ai-samples-v1", "feature_count": 1295, "global_features": 37,
+ "card_features": 34, "action_features": 18,
  "slots": {"hand": 10, "battlefield": 12, "stack": 3},
  "vocabulary": ["", "Island", "Opt", ...], "games": 200}
 ```
@@ -224,7 +229,9 @@ python -m mtgai.serve --policy-checkpoint checkpoints/policy_net.pt
 ```
 
 Watch **agreement**: the share of held-out positions where the network picks
-the same move as the agent that recorded them. Chance is about 4%. The
+the same move as the agent that recorded them. Chance is 29.4% on this data —
+the average of 1/(legal actions) per position, and many decisions offer only two
+or three. The
 `--max-per-game` flag exists because the whole dataset with its padded action
 matrices needs several gigabytes; decisions inside one game are near-duplicates
 anyway, so sampling costs little.

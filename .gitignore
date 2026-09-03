@@ -29,12 +29,7 @@ ai/training/datasets/*
 !ai/training/datasets/.gdignore
 !ai/training/datasets/README.md
 training_data/
-data/raw/cards.csv/
-data/raw/cardRulings.csv/
-data/raw/cardIdentifiers.csv/
-data/raw/cardLegalities.csv/
-data/raw/tokens.csv/
-
+# MTGJSON bulk exports, unpacked
 data/raw/cards.csv/
 data/raw/cardRulings.csv/
 data/raw/cardIdentifiers.csv/

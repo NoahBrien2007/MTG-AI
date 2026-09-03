@@ -51,6 +51,14 @@ capped at Greedy by construction.
 Agents are registered in `scripts/game/game_config.gd` (`AGENT_TYPES` +
 `create_agent`) and appear in the Training screen and the opponent dropdown.
 
+**AI Stats** (main menu -> `scenes/AIStats.tscn`, `scripts/ui/ai_stats.gd`)
+shows every agent with its measured win rate, what it needs, and what it is good
+and bad at. The numbers live in `data/ai_stats.json` and are rewritten by
+`sweep_blend.gd`, so the screen cannot drift from the last real measurement; the
+prose in that file is hand-maintained. The status beside each agent is a live
+`/health` probe, which is how you see that a row would be the Greedy fallback
+*before* spending 100 games on it.
+
 ### Python side (`ai/python/mtgai/`)
 
 | file | role |
@@ -166,7 +174,7 @@ python -m mtgai.train --lr 3e-4 --weight-decay 1e-2 --dropout 0.35 \
 python -m mtgai.serve --policy-checkpoint checkpoints/policy_net.pt \
   --checkpoint checkpoints/B/value_net.pt
 
-# measure
+# measure — also rewrites data/ai_stats.json for the AI Stats screen
 godot --headless -s tests/sweep_blend.gd -- 100
 ```
 
@@ -174,20 +182,69 @@ godot --headless -s tests/sweep_blend.gd -- 100
 
 ## Next steps, in order
 
-### 1. Retrain the policy on a single teacher (30 min)
+### 1. Retrain the policy on a single teacher (~30 min)
 
 The current policy imitates two agents that disagree: `games_2026-09-03T12-33-44*`
 is pre-settle Greedy, `games_2026-09-03T13-17-46*` is post-settle Greedy — and
-it is judged only against the stronger one. Train on the newer set alone, with
-more decisions per game since half the data means half the memory:
+it is judged only against the stronger one. Half the data, one teacher, twice
+the decisions per game (half the files means half the memory):
+
+**1. Check the engine is where you left it.**
 
 ```bash
-python -m mtgai.policy ../training/datasets/games_2026-09-03T13-17-46*.jsonl \
-  --max-per-game 120 --epochs 60
+godot --headless -s tests/test_rules.gd      # must end in ALL TESTS ... SUCCESSFULLY
 ```
 
-Expect agreement above 87.7%. Every point there compounds through the search
-sitting on top of it.
+**2. Confirm the teacher set is encoding-compatible.** Both current sets are
+`feature_count` 1295 / `card_features` 34; anything else cannot be trained
+against this build.
+
+```bash
+head -c 200 ai/training/datasets/games_2026-09-03T13-17-46.jsonl
+```
+
+**3. Train, into its own folder.** `--out-dir` keeps the two-teacher checkpoint
+intact, so the old and new policies can be compared instead of one replacing
+the other.
+
+```bash
+cd ai/python && source .venv/bin/activate
+python -m mtgai.policy ../training/datasets/games_2026-09-03T13-17-46*.jsonl \
+  --max-per-game 120 --epochs 60 --out-dir checkpoints/policy_single
+```
+
+Watch `agreement` climb. Expect above 87.7% — every point there compounds
+through the search sitting on top of it. If it plateaus in the first two epochs
+the way every value-net run did, the labels are the problem, not the schedule.
+
+**4. Serve it and check what is actually loaded.** A stopped or half-loaded
+server does not fail; it silently measures Greedy under the model's name.
+
+```bash
+python -m mtgai.serve --policy-checkpoint checkpoints/policy_single/policy_net.pt
+curl -s localhost:8787/health      # "policy": true, "feature_count": 1295
+```
+
+**5. Measure, at 100 games.**
+
+```bash
+godot --headless -s tests/sweep_blend.gd -- 100
+```
+
+Read the `greedy` control first: if it is not near 50%, nothing else on that run
+means anything. Then check `net calls` is non-zero on the policy rows. The sweep
+writes its rows into `data/ai_stats.json`, so the AI Stats screen shows the new
+numbers with no further work.
+
+**6. Keep it or drop it.** Better than 17% policy / 53% policy+search: copy
+`checkpoints/policy_single/policy_net.pt` over `checkpoints/policy_net.pt`, so
+every documented `serve` command picks it up without a new flag. Worse: serve
+the old path again — the two-teacher checkpoint was never touched.
+
+One trap: training rewrites `ai/training/vocabulary.json`, which the Godot
+encoder reads at startup. Card ids are assigned in first-encountered order, so
+a checkpoint only matches the vocabulary written by *its own* run. If you keep
+two checkpoints, only the most recently trained one is safe to serve.
 
 ### 2. Test search depth 3 (one sweep)
 

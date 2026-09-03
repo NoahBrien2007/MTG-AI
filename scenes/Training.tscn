@@ -97,7 +97,7 @@ text = "Record training data"
 
 [node name="Record" type="CheckBox" parent="Margin/VBox/Grid"]
 layout_mode = 2
-text = "Save every decision to user://training/*.jsonl"
+text = "Save every decision to res://ai/training/datasets/*.jsonl"
 
 [node name="Progress" type="ProgressBar" parent="Margin/VBox"]
 layout_mode = 2
