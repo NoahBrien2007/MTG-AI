@@ -451,6 +451,8 @@ func _advance_step(state: MTGGameState) -> void:
 	state.priority_player = state.active_player
 
 
+## Called only from _advance_step(), once per turn. A second call in the same
+## turn refunds every land the active player has tapped, so keep it that way.
 func _execute_untap_step(state: MTGGameState) -> void:
 	for card in state.players[state.active_player].battlefield:
 		card.tapped = false
@@ -471,7 +473,14 @@ func _execute_cleanup_step(state: MTGGameState) -> void:
 	state.consecutive_passes = 0
 	state.current_phase = MTGGameState.Phase.BEGINNING
 	state.current_step = MTGGameState.Step.UNTAP
-	_execute_untap_step(state)
+	# CR 502.4: no player receives priority during the untap step. Untapping
+	# here and *leaving* the game in UNTAP did two wrong things at once — it gave
+	# the active player a window to tap lands and cast spells in the untap step,
+	# and then untapped those same lands again on the way out of it, which is
+	# free mana every single turn. Advancing straight through means
+	# _execute_untap_step() runs exactly once per turn, from one place, and
+	# nobody is ever asked for an action while the step is UNTAP.
+	_advance_step(state)
 
 
 func _clear_mana_pools(state: MTGGameState) -> void:

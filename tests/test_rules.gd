@@ -2,10 +2,17 @@ extends SceneTree
 
 ## Headless engine tests. Run from the project folder with:
 ##   godot --headless -s tests/test_rules.gd
+##
+## Use `_expect()`, not `assert()`, in new tests. A failed `assert()` prints a
+## SCRIPT ERROR and then carries straight on in a headless run, so the suite
+## used to print "ALL TESTS ... SUCCESSFULLY" underneath a failure and exit 0 —
+## which is worse than having no tests. `_expect()` records the failure, prints
+## every one at the end, and exits non-zero.
 
 const DECK := "res://data/decks/botboys_deck_izzet.txt"
 
 var _engine := MTGRulesEngine.new()
+var _failures: Array[String] = []
 
 
 func _init() -> void:
@@ -16,6 +23,7 @@ func _init() -> void:
 	test_mana_and_land_play()
 	test_combat_and_sba()
 	test_action_validation()
+	test_untap_happens_once()
 	test_burst_lightning_kicker()
 	test_spell_pierce()
 	test_opt_scry_and_draw()
@@ -30,6 +38,12 @@ func _init() -> void:
 	test_streamed_recording()
 	test_value_net_agent_fallback()
 	test_policy_agent_fallback()
+	if not _failures.is_empty():
+		print("\n--- %d FAILURE(S) ---" % _failures.size())
+		for failure in _failures:
+			print("  [FAIL] %s" % failure)
+		quit(1)
+		return
 	print("--- ALL TESTS AND SIMULATIONS COMPLETED SUCCESSFULLY! ---")
 	quit(0)
 
@@ -40,6 +54,13 @@ func _new_session() -> GameSession:
 	var session := GameSession.new()
 	session.setup(DECK, DECK, HeuristicAgent.new(0), HeuristicAgent.new(1), 12345)
 	return session
+
+
+## Records a failure instead of trusting assert(), which a headless run ignores.
+func _expect(condition: bool, message: String) -> void:
+	if not condition:
+		_failures.append(message)
+		print("  [FAIL] %s" % message)
 
 
 func _card(state: MTGGameState, card_name: String, owner: int) -> CardInstance:
@@ -178,6 +199,41 @@ func test_action_validation() -> void:
 
 
 # ───────────────────────────── Cards ─────────────────────────────
+
+func test_untap_happens_once() -> void:
+	print("[Test] Untap step runs once per turn...")
+	var state := _new_session().state
+	var island := _to_battlefield(state, "Island", 0)
+	island.tapped = true
+
+	# Sit at the end of player 1's turn, so the next two passes cross the turn
+	# boundary exactly the way a real game does.
+	state.active_player = 1
+	state.priority_player = 1
+	state.current_phase = MTGGameState.Phase.ENDING
+	state.current_step = MTGGameState.Step.END_STEP
+	state.stack.clear()
+	state = _pass_both(state)
+
+	_expect(state.active_player == 0, "The turn should have passed to player 0")
+	# CR 502.4 — nobody gets priority in the untap step. Being able to act there
+	# is what made the double untap reachable.
+	_expect(state.current_step != MTGGameState.Step.UNTAP,
+		"No player may hold priority during the untap step, got %s" % state.step_name())
+	_expect(not state.players[0].battlefield[0].tapped, "The untap step should have untapped my Island")
+
+	# Tap it for mana, then pass around. If the untap step runs a second time on
+	# the way out, the land comes back untapped and the turn has free mana.
+	var tap := _find(_engine.get_legal_actions(state), MTGAction.ActionType.TAP_LAND, island.instance_id)
+	_expect(tap != null, "Should be able to tap the Island for mana")
+	if tap != null:
+		state = _engine.apply_action(state, tap)
+		_expect(state.players[0].battlefield[0].tapped, "Tapping the Island should tap it")
+		state = _pass_both(state)
+		_expect(state.players[0].battlefield[0].tapped,
+			"A land tapped for mana must stay tapped — the untap step ran twice")
+	print(" -> Untapped once, and a land tapped for mana stays tapped.")
+
 
 func test_burst_lightning_kicker() -> void:
 	print("[Test] Burst Lightning (kicker, any target)...")

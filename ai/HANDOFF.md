@@ -12,6 +12,12 @@ changing anything.
 Every number below is 100 games against `GreedyAgent`, alternating who is on
 the play, standard error ±5%. Measured with `tests/sweep_blend.gd`.
 
+> **These were measured before the double-untap fix (bug #8), under rules that
+> handed both players free mana every turn.** The ordering is probably intact —
+> the exploit was symmetric after turn one — but re-run
+> `sweep_blend.gd -- 100` before quoting any of them, and re-record before
+> training anything new.
+
 | agent | win rate | what it is |
 | --- | --- | --- |
 | Greedy (control) | 53% | the hand-written 1-ply search, playing itself |
@@ -145,6 +151,26 @@ sweeps at that size produced no usable information. Use 100.
    value rows ran against a server with no value net, silently measuring the
    Greedy fallback under the model's name. Three runs were wasted on this. The
    sweep now prints a `net calls` column and flags any row with zero.
+8. **The untap step ran twice, and gave priority.** `_execute_cleanup_step()`
+   untapped the new active player's permanents and then left `current_step` at
+   `UNTAP`. Nothing gates `get_legal_actions()` by step, so the active player
+   held priority in the untap step — and passing out of it hit
+   `_advance_step()`'s `UNTAP` branch, which untapped everything a *second*
+   time. Tap three lands in the untap step, cast an instant, pass: the lands
+   come back untapped. Free mana, every turn, for humans and agents alike.
+   Cleanup now advances straight through the untap step (CR 502.4: no player
+   receives priority there), so `_execute_untap_step()` runs once, from one
+   place. Regression: `test_untap_happens_once`.
+
+   **Two consequences worth knowing.** Every recording in
+   `ai/training/datasets/` was made under those rules, so its decisions were
+   made in a game that is not this one; the win rates in the table above were
+   too. Both sides had the exploit from their second turn onward, so the
+   *ordering* of the agents is probably intact, but the numbers need a fresh
+   `sweep_blend.gd -- 100` before they mean anything again. And the exploit was
+   asymmetric on turn one: `GameSession.setup()` starts the game at `MAIN_1`, so
+   the player on the play never got an untap-step window on their first turn
+   while the player on the draw did — see the open question below.
 
 ---
 
@@ -305,10 +331,14 @@ the better policy. Stop when a cycle stops moving the win rate.
 
 ## Open questions worth answering some day
 
-- Going first is a small *disadvantage* in this engine: 46.1% of games were won
-  by the player on the play, across 1000 games with balanced seats. That is
-  backwards from real Magic and suggests something around the first-player draw
-  skip or agents that do not convert tempo.
+- Going first was a small *disadvantage* in this engine: 46.1% of games were
+  won by the player on the play, across 1000 games with balanced seats — 
+  backwards from real Magic. **The double-untap bug (#8) is the leading
+  suspect.** The game starts at `MAIN_1`, so the player on the play had no
+  untap step on turn one and no free-mana window; the player on the draw got
+  one on their first turn. That is a one-turn mana advantage handed to the
+  wrong seat. Re-measure now that untap is fixed before looking for any other
+  cause.
 - Greedy's formula is inverted in the early game (0.341 AUC before turn 7) and
   still plays well. Its early-game terms are doing something other than what
   they claim to.
