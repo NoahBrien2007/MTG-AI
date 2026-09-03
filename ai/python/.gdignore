@@ -1,0 +1,1 @@
+# Keeps the Godot editor from scanning the Python package (and a .venv full of files).
