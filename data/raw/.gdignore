@@ -1,0 +1,1 @@
+# Tells Godot not to import/scan the raw MTGJSON dumps (they were being imported as translation tables).

@@ -1,0 +1,64 @@
+[gd_scene format=3 uid="uid://ttfh33rqhm8v"]
+
+[ext_resource type="Script" uid="uid://c88q4e53jc026" path="res://scripts/ui/main_menu.gd" id="1_menu"]
+
+[node name="MainMenu" type="Control" unique_id=2092814198]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_menu")
+
+[node name="Background" type="ColorRect" parent="." unique_id=1726109295]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.07, 0.08, 0.11, 1)
+
+[node name="Center" type="CenterContainer" parent="." unique_id=1075989750]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="Center" unique_id=432499469]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Center/VBox" unique_id=1125948283]
+layout_mode = 2
+theme_override_font_sizes/font_size = 56
+text = "MTG AI"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Center/VBox" unique_id=102911586]
+modulate = Color(1, 1, 1, 0.6)
+layout_mode = 2
+text = "Play against the AI, or train it."
+horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="Center/VBox" unique_id=1863783942]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+
+[node name="BtnPlay" type="Button" parent="Center/VBox" unique_id=1732850278]
+custom_minimum_size = Vector2(280, 52)
+layout_mode = 2
+text = "Play"
+
+[node name="BtnTraining" type="Button" parent="Center/VBox" unique_id=1352057592]
+custom_minimum_size = Vector2(280, 52)
+layout_mode = 2
+text = "AI Training"
+
+[node name="BtnQuit" type="Button" parent="Center/VBox" unique_id=1335704491]
+custom_minimum_size = Vector2(280, 40)
+layout_mode = 2
+text = "Quit"

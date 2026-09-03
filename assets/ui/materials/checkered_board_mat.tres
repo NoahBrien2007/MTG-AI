@@ -1,0 +1,15 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://61s46t70mdup"]
+
+[ext_resource type="Shader" uid="uid://w8ba6sq0yirp" path="res://assets/ui/materials/checkered_board.gdshader" id="1_shader"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_shader")
+shader_parameter/fill_color = Color(0, 0.75, 1, 0.12)
+shader_parameter/grid_line_color = Color(0, 0.85, 1, 0.45)
+shader_parameter/outline_color = Color(0, 0.9, 1, 0.7)
+shader_parameter/board_dimensions = Vector2(1.6, 1)
+shader_parameter/card_scale = 0.08
+shader_parameter/grid_line_thickness = 0.012
+shader_parameter/outline_thickness = 0.008
+shader_parameter/hover_alpha = 0.0

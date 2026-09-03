@@ -1,0 +1,58 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/game/game_controller.gd" id="1_game"]
+[ext_resource type="Material" uid="uid://61s46t70mdup" path="res://assets/ui/materials/checkered_board_mat.tres" id="2_board_mat"]
+[ext_resource type="PackedScene" uid="uid://byvl2enb2moh0" path="res://assets/3d/table_b/table_b.fbx" id="3_table"]
+[ext_resource type="Script" path="res://scripts/ui/board_grid.gd" id="4_grid"]
+[ext_resource type="Script" path="res://scripts/ui/table_camera.gd" id="5_camera"]
+[ext_resource type="Script" path="res://scripts/ui/board_view.gd" id="6_board_view"]
+[ext_resource type="PackedScene" path="res://scenes/GameHUD.tscn" id="7_hud"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_board"]
+material = ExtResource("2_board_mat")
+size = Vector2(1.6, 1.008)
+orientation = 1
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_board"]
+size = Vector3(1.6226768, 0.17645264, 1.1103984)
+
+[sub_resource type="Environment" id="Environment_game"]
+
+[node name="Game" type="Node3D"]
+script = ExtResource("1_game")
+
+[node name="Table" parent="." instance=ExtResource("3_table")]
+transform = Transform3D(5, 0, 0, 0, 5, 0, 0, 0, 5, 0, 0, 0)
+
+[node name="PlayfieldBoards" type="MeshInstance3D" parent="Table"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.573, -0.022360867)
+material_override = ExtResource("2_board_mat")
+mesh = SubResource("QuadMesh_board")
+script = ExtResource("4_grid")
+columns = 20
+
+[node name="Area3D" type="Area3D" parent="Table/PlayfieldBoards"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Table/PlayfieldBoards/Area3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 0.9999998, -0.0034123422, -0.040252686, -0.0046452135)
+shape = SubResource("BoxShape3D_board")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(-1, 6.181724e-08, -6.181724e-08, 0, 0.70710677, 0.70710677, 8.742278e-08, 0.70710677, -0.70710677, 0, 4.860203, -3.6959963)
+script = ExtResource("5_camera")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_game")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -0.33020863, 0.94390804, 0, -0.94390804, -0.33020863, 0, 13.957007, -9.413961)
+
+[node name="BoardView" type="Node3D" parent="." node_paths=PackedStringArray("grid", "sun")]
+script = ExtResource("6_board_view")
+grid = NodePath("../Table/PlayfieldBoards")
+sun = NodePath("../DirectionalLight3D")
+
+[node name="GameHUD" parent="." instance=ExtResource("7_hud")]
+
+[connection signal="mouse_entered" from="Table/PlayfieldBoards/Area3D" to="Table/PlayfieldBoards" method="on_hover_enter"]
+[connection signal="mouse_exited" from="Table/PlayfieldBoards/Area3D" to="Table/PlayfieldBoards" method="on_hover_exit"]

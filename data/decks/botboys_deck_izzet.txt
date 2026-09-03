@@ -1,0 +1,29 @@
+// Botboy's Deck (Izzet)
+// Standard Deck
+
+// Creature
+3 Eddymurk Crab
+2 Hydro-Man, Fluid Felon
+4 Slickshot Show-Off
+
+// Enchantment
+4 Stormchaser's Talent
+
+// Instant
+4 Burst Lightning
+4 Opt
+2 Shore Up
+2 Spell Pierce
+2 Vibrant Outburst
+
+// Land
+7 Island
+2 Multiversal Passage
+4 Riverpyre Verge
+4 Spirebluff Canal
+4 Steam Vents
+
+// Sorcery
+4 Boomerang Basics
+4 Flow State
+4 Sleight of Hand

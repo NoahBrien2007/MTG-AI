@@ -1,0 +1,128 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/training_menu.gd" id="1_training"]
+
+[node name="Training" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_training")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.07, 0.08, 0.11, 1)
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 32
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 36
+text = "AI Training — self-play"
+
+[node name="Description" type="Label" parent="Margin/VBox"]
+modulate = Color(1, 1, 1, 0.6)
+layout_mode = 2
+text = "Runs headless AI-vs-AI games through the same rules engine and action set the Play mode uses. Results are printed here and to the output console."
+autowrap_mode = 3
+
+[node name="Grid" type="GridContainer" parent="Margin/VBox"]
+layout_mode = 2
+columns = 2
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 8
+
+[node name="LblAgentA" type="Label" parent="Margin/VBox/Grid"]
+layout_mode = 2
+text = "Player 0 agent"
+
+[node name="AgentA" type="OptionButton" parent="Margin/VBox/Grid"]
+layout_mode = 2
+
+[node name="LblDeckA" type="Label" parent="Margin/VBox/Grid"]
+layout_mode = 2
+text = "Player 0 deck"
+
+[node name="DeckA" type="OptionButton" parent="Margin/VBox/Grid"]
+layout_mode = 2
+
+[node name="LblAgentB" type="Label" parent="Margin/VBox/Grid"]
+layout_mode = 2
+text = "Player 1 agent"
+
+[node name="AgentB" type="OptionButton" parent="Margin/VBox/Grid"]
+layout_mode = 2
+
+[node name="LblDeckB" type="Label" parent="Margin/VBox/Grid"]
+layout_mode = 2
+text = "Player 1 deck"
+
+[node name="DeckB" type="OptionButton" parent="Margin/VBox/Grid"]
+layout_mode = 2
+
+[node name="LblGames" type="Label" parent="Margin/VBox/Grid"]
+layout_mode = 2
+text = "Games"
+
+[node name="Games" type="SpinBox" parent="Margin/VBox/Grid"]
+layout_mode = 2
+min_value = 1.0
+max_value = 1000.0
+value = 20.0
+
+[node name="LblRecord" type="Label" parent="Margin/VBox/Grid"]
+layout_mode = 2
+text = "Record training data"
+
+[node name="Record" type="CheckBox" parent="Margin/VBox/Grid"]
+layout_mode = 2
+text = "Save every decision to user://training/*.jsonl"
+
+[node name="Progress" type="ProgressBar" parent="Margin/VBox"]
+layout_mode = 2
+show_percentage = false
+
+[node name="Results" type="RichTextLabel" parent="Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+scroll_following = true
+
+[node name="Buttons" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="BtnBack" type="Button" parent="Margin/VBox/Buttons"]
+custom_minimum_size = Vector2(140, 44)
+layout_mode = 2
+text = "Back"
+
+[node name="Spacer" type="Control" parent="Margin/VBox/Buttons"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BtnRun" type="Button" parent="Margin/VBox/Buttons"]
+custom_minimum_size = Vector2(200, 44)
+layout_mode = 2
+text = "Run"

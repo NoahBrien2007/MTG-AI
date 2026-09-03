@@ -1,0 +1,12 @@
+[gd_scene format=3 uid="uid://4h5dgbc7pd5d"]
+
+[ext_resource type="Script" path="res://scripts/ui/card_template.gd" id="1_card_template"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_card"]
+size = Vector3(1.4, 2, 0.02)
+
+[node name="CardTemplate" type="Node3D" unique_id=1301229364]
+script = ExtResource("1_card_template")
+
+[node name="CardMesh" type="MeshInstance3D" parent="." unique_id=1075162494]
+mesh = SubResource("BoxMesh_card")

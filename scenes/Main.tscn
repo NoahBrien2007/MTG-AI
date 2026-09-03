@@ -1,3 +1,59 @@
-[gd_scene format=3 uid="uid://gulbpqe4yxrt"]
+[gd_scene format=3 uid="uid://b1rxsfx1awqyo"]
+
+[ext_resource type="Material" uid="uid://61s46t70mdup" path="res://assets/ui/materials/checkered_board_mat.tres" id="2_0bbpv"]
+[ext_resource type="PackedScene" uid="uid://byvl2enb2moh0" path="res://assets/3d/table_b/table_b.fbx" id="2_rvslj"]
+[ext_resource type="Script" path="res://scripts/ui/grid_board_hover.gd" id="3_0bbpv"]
+[ext_resource type="Script" path="res://scripts/ui/spectator.gd" id="3_rarhs"]
+[ext_resource type="Script" path="res://scripts/ui/spectator_controller.gd" id="5_c01mt"]
+[ext_resource type="Script" path="res://scripts/ui/card_visual_manager.gd" id="6_nxtc6"]
+[ext_resource type="PackedScene" path="res://scenes/SpectatorHUD.tscn" id="7_nxtc6"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_cyesr"]
+material = ExtResource("2_0bbpv")
+size = Vector2(1.6, 1)
+orientation = 1
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_cyesr"]
+size = Vector3(1.6226768, 0.17645264, 1.1103984)
+
+[sub_resource type="Environment" id="Environment_cyesr"]
 
 [node name="Main" type="Node3D" unique_id=1729204813]
+
+[node name="Table" parent="." unique_id=1103915470 instance=ExtResource("2_rvslj")]
+transform = Transform3D(5, 0, 0, 0, 5, 0, 0, 0, 5, 0, 0, 0)
+
+[node name="PlayfieldBoards" type="MeshInstance3D" parent="Table" unique_id=2024835051]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.573, -0.022360867)
+material_override = ExtResource("2_0bbpv")
+mesh = SubResource("QuadMesh_cyesr")
+script = ExtResource("3_0bbpv")
+
+[node name="Area3D" type="Area3D" parent="Table/PlayfieldBoards" unique_id=470284777]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Table/PlayfieldBoards/Area3D" unique_id=125430731]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 0.9999998, -0.0034123422, -0.040252686, -0.0046452135)
+shape = SubResource("BoxShape3D_cyesr")
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=863411798]
+transform = Transform3D(-1, 6.181724e-08, -6.181724e-08, 0, 0.70710677, 0.70710677, 8.742278e-08, 0.70710677, -0.70710677, 0, 4.860203, -3.6959963)
+script = ExtResource("3_rarhs")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1517538233]
+environment = SubResource("Environment_cyesr")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1809931330]
+transform = Transform3D(1, 0, 0, 0, -0.33020863, 0.94390804, 0, -0.94390804, -0.33020863, 0, 13.957007, -9.413961)
+
+[node name="SpectatorController" type="Node3D" parent="." unique_id=20104456 node_paths=PackedStringArray("visual_manager")]
+script = ExtResource("5_c01mt")
+visual_manager = NodePath("../CardVisualManager")
+
+[node name="CardVisualManager" type="Node3D" parent="." unique_id=1311126579]
+script = ExtResource("6_nxtc6")
+
+[node name="SpectatorHud" parent="." unique_id=1080123746 node_paths=PackedStringArray("controller") instance=ExtResource("7_nxtc6")]
+controller = NodePath("../SpectatorController")
+
+[connection signal="mouse_entered" from="Table/PlayfieldBoards/Area3D" to="Table/PlayfieldBoards" method="on_hover_enter"]
+[connection signal="mouse_exited" from="Table/PlayfieldBoards/Area3D" to="Table/PlayfieldBoards" method="on_hover_exit"]

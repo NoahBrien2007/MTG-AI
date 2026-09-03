@@ -1,0 +1,3085 @@
+MAGIC: THE GATHERING AI PLAYER
+LONG-TERM PASSION PROJECT — DEVELOPMENT MASTER DOCUMENT
+Version 1.0
+Date: September 1, 2026
+
+======================================================================
+0. PROJECT PURPOSE
+======================================================================
+
+PROJECT NAME
+-------------
+Working name: MTG AI Player
+Possible future product names:
+- ManaMind
+- StackMind
+- Planeswalker AI
+- ManaBrain
+- SpellSense
+- Priority
+- Arcane Engine
+- DuelMind
+
+CORE VISION
+-----------
+Build a serious artificial intelligence system that can learn to play
+Magic: The Gathering at a high level.
+
+The project is NOT intended to begin as:
+- a chatbot that recommends cards
+- a simple "best play" LLM wrapper
+- an Arena bot made by clicking pixels
+- a deck recommendation website
+
+The long-term goal is to build a real game-playing intelligence.
+
+The ideal final system should be able to:
+
+1. Represent a complete MTG game state.
+2. Understand legal game actions.
+3. Search through possible future game states.
+4. Handle hidden information and uncertainty.
+5. Evaluate board states and strategic positions.
+6. Learn from self-play and/or recorded games.
+7. Model different opponents and play styles.
+8. Make decisions at multiple levels of abstraction.
+9. Explain decisions in understandable language.
+10. Analyze human games and identify mistakes.
+11. Eventually play against humans.
+12. Eventually become a sellable MTG training/product platform.
+
+IMPORTANT PHILOSOPHY
+--------------------
+Build the underlying technology first.
+
+Do not optimize for flashy UI early.
+Do not build monetization before the core engine is credible.
+Do not depend on an external LLM for the fundamental game-playing logic.
+Do not attempt all of Magic at once.
+
+The most important asset is the game engine + AI environment + training
+pipeline. Everything else can be built around it later.
+
+======================================================================
+1. WHAT MAKES MAGIC DIFFICULT FOR AI
+======================================================================
+
+Magic is an unusually difficult game for an AI because it combines:
+
+- enormous card variety
+- hidden information
+- randomness
+- imperfect information
+- timing and priority
+- the stack
+- triggered abilities
+- replacement effects
+- continuous effects
+- combat decisions
+- resource management
+- bluffing
+- sequencing
+- long-term planning
+- rapidly changing board states
+- interactions between cards
+- multiple possible legal actions
+- different objectives depending on deck and game state
+
+This means the project should NOT treat MTG as a normal board game.
+
+A useful mental model is:
+
+CHESS
+------
+Mostly:
+known state -> choose move -> new state
+
+MTG
+---
+partially observed state
+      +
+large action space
+      +
+random events
+      +
+opponent hidden information
+      +
+rules engine
+      +
+strategic planning
+      +
+tactical response
+
+Therefore, the AI architecture should eventually combine:
+
+- rules engine
+- action generation
+- state evaluation
+- search/planning
+- probability
+- opponent modeling
+- machine learning
+- memory
+- natural-language explanation
+
+======================================================================
+2. THE THREE MAJOR SYSTEMS
+======================================================================
+
+The project should be thought of as three major systems.
+
+SYSTEM A — MAGIC SIMULATION ENGINE
+----------------------------------
+This is the foundation.
+
+Responsibilities:
+- cards
+- zones
+- players
+- permanents
+- spells
+- abilities
+- stack
+- priority
+- phases
+- turns
+- combat
+- state-based actions
+- replacement effects
+- triggered abilities
+- continuous effects
+- costs
+- targets
+- randomness
+- rules validation
+
+SYSTEM B — AI DECISION ENGINE
+-----------------------------
+This is the actual player.
+
+Responsibilities:
+- observe state
+- generate legal actions
+- rank candidate actions
+- predict future states
+- evaluate positions
+- account for hidden information
+- choose an action
+- learn from outcomes
+
+SYSTEM C — HUMAN PRODUCT LAYER
+------------------------------
+This is the eventual application.
+
+Responsibilities:
+- game UI
+- deck import
+- replay viewer
+- AI opponent
+- coaching
+- analysis
+- explanations
+- accounts
+- statistics
+- matchmaking
+- progression
+- subscriptions / monetization
+
+RULE:
+-----
+SYSTEM C must never become more important than A and B during the
+early development stages.
+
+======================================================================
+3. OVERALL ARCHITECTURE
+======================================================================
+
+Suggested high-level architecture:
+
+                CARD DATABASE
+                      |
+                      v
+              +---------------+
+              | RULES ENGINE  |
+              +-------+-------+
+                      |
+                      v
+              +---------------+
+              | GAME STATE    |
+              +-------+-------+
+                      |
+          +-----------+-----------+
+          |                       |
+          v                       v
+   ACTION GENERATOR        OBSERVATION MODEL
+          |                       |
+          +-----------+-----------+
+                      |
+                      v
+              +---------------+
+              | AI DECISION   |
+              |    ENGINE     |
+              +-------+-------+
+                      |
+          +-----------+-----------+
+          |                       |
+          v                       v
+     SEARCH / MCTS          VALUE MODEL
+          |                       |
+          +-----------+-----------+
+                      |
+                      v
+                ACTION SELECTED
+                      |
+                      v
+                RULES ENGINE
+                      |
+                      v
+                 NEW STATE
+
+For training:
+
+                  SELF PLAY
+                     |
+                     v
+              GAME TRAJECTORIES
+                     |
+                     v
+             TRAINING DATASET
+                     |
+             +-------+-------+
+             |               |
+             v               v
+         POLICY MODEL     VALUE MODEL
+             |               |
+             +-------+-------+
+                     |
+                     v
+                EVALUATION
+                     |
+                     v
+                NEW AGENT
+
+======================================================================
+4. DEVELOPMENT PRINCIPLE: BUILD A SMALL MTG FIRST
+======================================================================
+
+DO NOT IMPLEMENT ALL OF MAGIC FIRST.
+
+Create a "Mini-Magic" environment.
+
+Suggested initial ruleset:
+
+- 2 players
+- 20 life
+- 40-card decks or simplified 60-card decks
+- basic lands
+- simple creatures
+- simple sorceries
+- simple instants
+- basic combat
+- no planeswalkers initially
+- no commanders initially
+- limited keywords
+- limited triggered abilities
+
+Example first card pool:
+
+LANDS
+-----
+Plains
+Island
+Swamp
+Mountain
+Forest
+
+CREATURES
+---------
+Grizzly Bears
+Llanowar Elves
+Goblin
+
+SPELLS
+------
+Lightning Bolt
+Giant Growth
+Divination
+Shock
+
+The goal is not to make an interesting card pool.
+
+The goal is to make the rules engine correct.
+
+======================================================================
+5. VERSION ROADMAP
+======================================================================
+
+VERSION 0.1 — RULES SANDBOX
+----------------------------
+Goal:
+Prove that cards can exist and game states can progress.
+
+Implement:
+- Player
+- Card
+- Zone
+- Mana
+- Life
+- Turn
+- Phase
+- Stack
+- basic spell casting
+- basic creature attacks
+
+Success condition:
+Two simple decks can complete thousands of games without corrupting
+game state.
+
+VERSION 0.2 — LEGAL ACTION SYSTEM
+----------------------------------
+Implement:
+- legal action generation
+- priority
+- targets
+- combat declarations
+- mana payment
+- response windows
+
+Success condition:
+The engine can enumerate every legal decision at each decision point.
+
+VERSION 0.3 — ADVANCED CARD INTERACTIONS
+-----------------------------------------
+Implement:
+- ETB effects
+- death triggers
+- activated abilities
+- static abilities
+- replacement effects
+- continuous effects
+- counters
+- tokens
+
+Success condition:
+Complex interactions can resolve deterministically.
+
+VERSION 0.4 — RANDOM CARD DATABASE
+-----------------------------------
+Connect a structured card database.
+
+Potential source:
+Scryfall data for card metadata/text/images.
+
+Important:
+Do not assume raw card text can always be directly executed.
+A separate implementation layer may be required.
+
+Create a card definition / ability representation.
+
+VERSION 0.5 — RANDOM PLAYABLE AI
+---------------------------------
+Implement:
+- random legal action agent
+- heuristic agent
+- greedy agent
+
+Purpose:
+These are baselines.
+
+Never skip baseline agents.
+
+VERSION 0.6 — SEARCH AI
+-----------------------
+Implement:
+- rollout simulation
+- Monte Carlo search
+- action pruning
+- shallow lookahead
+
+VERSION 0.7 — VALUE MODEL
+-------------------------
+Train a model to evaluate game states.
+
+Possible outputs:
+- expected win probability
+- expected game value
+- life advantage
+- board advantage
+- material/card advantage
+- tempo
+- mana efficiency
+- threat pressure
+
+VERSION 0.8 — SELF PLAY
+-----------------------
+AI plays against versions of itself.
+
+Collect:
+- states
+- actions
+- hidden information
+- outcomes
+- deck information
+- turn number
+- legal alternatives
+- reward
+
+Train progressively stronger models.
+
+VERSION 0.9 — IMPERFECT INFORMATION
+------------------------------------
+Implement:
+- unknown hand
+- hidden library cards
+- unknown topdeck
+- opponent card probability
+- belief states
+- opponent archetype estimation
+
+VERSION 1.0 — HUMAN PLAYABLE PROTOTYPE
+--------------------------------------
+A human can:
+- choose deck
+- play against AI
+- pause
+- inspect game state
+- see AI decisions
+- replay game
+- receive explanation
+
+VERSION 2.0 — AI COACH
+----------------------
+Add:
+- mistake detection
+- optimal line comparison
+- replay analysis
+- "what should I have done?"
+- alternate line exploration
+- skill rating
+
+VERSION 3.0 — PUBLIC PRODUCT
+----------------------------
+Possible:
+- accounts
+- cloud games
+- deck import
+- multiplayer AI
+- coaching
+- statistics
+- subscriptions
+- tournaments
+- leaderboards
+
+======================================================================
+6. GAME ENGINE DESIGN
+======================================================================
+
+The game engine should be deterministic when a random seed is provided.
+
+CORE OBJECTS
+------------
+
+Game
+----
+Contains:
+- players
+- turn number
+- active player
+- current phase
+- step
+- priority player
+- stack
+- random state
+- game history
+- pending triggers
+
+Player
+------
+Contains:
+- life
+- mana pool
+- hand
+- library
+- graveyard
+- battlefield permanents
+- exile
+- commander information later
+- counters later
+- choice state
+
+Card
+----
+Contains:
+- unique instance ID
+- card definition ID
+- owner
+- controller
+- zone
+- tapped state
+- counters
+- characteristics
+- attachments
+- face status
+- timestamps
+
+Card Definition
+---------------
+Contains:
+- card name
+- mana cost
+- type line
+- oracle text
+- color identity
+- power/toughness if applicable
+- keywords
+- structured abilities
+- set metadata
+- rarity
+- legality
+
+Permanent
+---------
+A battlefield representation of a card.
+
+Important:
+A Card Definition is NOT the same thing as a Card Instance.
+
+Example:
+
+Card Definition:
+"Lightning Bolt"
+
+Card Instance:
+specific Lightning Bolt currently owned by Player A.
+
+Zone
+----
+Possible zones:
+- library
+- hand
+- battlefield
+- graveyard
+- exile
+- command zone
+- stack
+- ante only if ever required
+
+Stack Object
+------------
+Should represent:
+- source
+- controller
+- spell/ability
+- chosen targets
+- modes
+- X values
+- costs paid
+- choices
+- timestamp
+
+======================================================================
+7. PRIORITY AND THE STACK
+======================================================================
+
+THIS IS ONE OF THE MOST IMPORTANT SYSTEMS.
+
+Do not write priority logic as scattered if-statements.
+
+Create a dedicated priority subsystem.
+
+Basic conceptual flow:
+
+1. Game reaches priority point.
+2. Active player gets priority.
+3. Player may:
+   - cast spell
+   - activate ability
+   - take special action
+   - pass
+4. If action is taken:
+   - cost is paid
+   - targets selected
+   - object added to stack
+   - priority resets according to rules
+5. Players continue passing.
+6. If all players pass:
+   - top object resolves
+7. State-based actions checked.
+8. Triggers placed on stack.
+9. Priority begins again.
+
+The engine must NEVER accidentally "skip" a legal response window.
+
+======================================================================
+8. ACTION REPRESENTATION
+======================================================================
+
+Every AI decision should eventually be represented as an Action object.
+
+Example conceptual structure:
+
+Action
+------
+type:
+- CAST_SPELL
+- ACTIVATE_ABILITY
+- ATTACK
+- BLOCK
+- PLAY_LAND
+- PASS_PRIORITY
+- SPECIAL_ACTION
+
+data:
+- card ID
+- ability ID
+- targets
+- mana payment
+- attackers
+- blockers
+- selected mode
+- X value
+- additional choices
+
+An action must be:
+
+1. uniquely representable
+2. serializable
+3. replayable
+4. validated by the rules engine
+5. reversible or reproducible for simulation
+
+This becomes critical for search.
+
+======================================================================
+9. GAME STATE SNAPSHOTS
+======================================================================
+
+AI search requires the ability to create hypothetical futures.
+
+Therefore:
+
+GameState -> clone -> apply action -> GameState'
+
+Do NOT mutate the live game during hypothetical search unless the engine
+supports safe transactional rollback.
+
+Preferred early approach:
+
+Immutable or snapshot-based state transitions.
+
+Later optimization may use:
+- copy-on-write
+- incremental state
+- reversible moves
+- memory pooling
+
+But correctness comes first.
+
+======================================================================
+10. RANDOMNESS
+======================================================================
+
+All random events should come from a centralized RNG system.
+
+Examples:
+- shuffle
+- random discard
+- random target
+- random reveal
+- random token choice
+
+The random generator should accept a seed.
+
+Every game should be reproducible from:
+
+GAME SEED
++
+INITIAL DECKS
++
+PLAYER ACTIONS
+
+This is incredibly valuable for debugging.
+
+Example:
+
+Game ID:
+839174
+
+Seed:
+1293819281
+
+When a bug occurs, save the seed and action sequence.
+
+Then reproduce exactly.
+
+======================================================================
+11. CARD SYSTEM STRATEGY
+======================================================================
+
+Do NOT hardcode every card directly into the engine.
+
+Separate:
+
+CARD DATA
+from
+RULES INTERPRETATION.
+
+Potential architecture:
+
+Scryfall JSON
+      |
+      v
+Card Normalizer
+      |
+      v
+Card Definition
+      |
+      v
+Ability Representation
+      |
+      v
+Rules Engine
+
+Three possible implementation approaches:
+
+APPROACH A — SCRIPTED CARDS
+---------------------------
+Each card has custom code.
+
+Pros:
+- flexible
+- easy to start
+
+Cons:
+- impossible to maintain for thousands of cards
+
+APPROACH B — DECLARATIVE CARD DSL
+---------------------------------
+Represent abilities as structured operations.
+
+Example conceptual:
+
+EFFECT:
+  DRAW
+  amount: 1
+
+Pros:
+- scalable
+- searchable
+- machine-readable
+
+APPROACH C — HYBRID
+-------------------
+Simple cards use declarative effects.
+Complex cards use custom logic hooks.
+
+Recommended long-term approach:
+HYBRID.
+
+======================================================================
+12. AI AGENTS
+======================================================================
+
+Before building a neural network, create several baseline agents.
+
+AGENT 0 — RANDOM
+----------------
+Chooses a random legal action.
+
+Purpose:
+Ensure the environment actually works.
+
+AGENT 1 — SIMPLE HEURISTIC
+---------------------------
+Examples:
+- play land every turn
+- attack when profitable
+- cast cheap spells
+- remove dangerous creatures
+
+AGENT 2 — VALUE HEURISTIC
+--------------------------
+Considers:
+- card advantage
+- mana efficiency
+- life
+- board size
+- creature strength
+
+AGENT 3 — LOOKAHEAD
+-------------------
+Simulates a few turns/actions.
+
+AGENT 4 — MCTS
+--------------
+Monte Carlo Tree Search.
+
+AGENT 5 — POLICY NETWORK
+------------------------
+Neural network predicts useful actions.
+
+AGENT 6 — POLICY + VALUE
+------------------------
+Policy suggests actions.
+Value estimates resulting states.
+
+AGENT 7 — SEARCH + LEARNED VALUE
+---------------------------------
+Search uses the learned value function.
+
+AGENT 8 — IMPERFECT INFORMATION AGENT
+--------------------------------------
+Maintains beliefs about hidden cards.
+
+======================================================================
+13. WHY BASELINES MATTER
+======================================================================
+
+You need measurable progress.
+
+Never say:
+"The AI feels better."
+
+Instead track:
+
+Win rate vs random
+Win rate vs heuristic
+Win rate vs previous model
+Win rate going first
+Win rate going second
+Average game length
+Average life total
+Average cards drawn
+Average mana efficiency
+Mistakes per game
+Search nodes per decision
+Decision time
+Prediction accuracy
+
+Every new AI version should be evaluated against fixed opponents.
+
+Example:
+
+AI v0.14:
+- 62.1% vs heuristic
+- 51.3% vs v0.10
+- 49.7% vs v0.13
+
+AI v0.15:
+- 67.2% vs heuristic
+- 57.8% vs v0.10
+- 53.4% vs v0.13
+
+This gives objective progress.
+
+======================================================================
+14. SEARCH
+======================================================================
+
+Magic's action space can become huge.
+
+Suppose:
+- 8 cards in hand
+- 10 permanents
+- 6 abilities
+- multiple targets
+- multiple attackers
+- multiple modes
+
+The number of possible actions can explode.
+
+Therefore AI search needs:
+
+ACTION PRUNING
+--------------
+Remove obviously useless actions.
+
+Examples:
+- illegal actions
+- redundant actions
+- dominated actions
+- irrelevant target combinations
+
+ACTION GROUPING
+---------------
+Treat equivalent actions similarly where possible.
+
+HIERARCHICAL ACTIONS
+--------------------
+Instead of immediately deciding every click:
+
+LEVEL 1:
+What is the plan?
+
+LEVEL 2:
+What category of action?
+
+LEVEL 3:
+Which card?
+
+LEVEL 4:
+Which target?
+
+LEVEL 5:
+Which exact mode/payment?
+
+This can drastically reduce search complexity.
+
+======================================================================
+15. MONTE CARLO TREE SEARCH
+======================================================================
+
+Potential structure:
+
+ROOT
+ |
+ +-- Action A
+ |     |
+ |     +-- Opponent response
+ |     +-- Opponent response
+ |
+ +-- Action B
+ |
+ +-- Action C
+
+MCTS cycle:
+
+1. Selection
+2. Expansion
+3. Simulation
+4. Evaluation
+5. Backpropagation
+
+For MTG, simulations must account for hidden information.
+
+Therefore eventually use:
+
+Information Set MCTS
+or another imperfect-information search approach.
+
+Early version:
+Simple rollout with deterministic/random opponent behavior.
+
+Later:
+Opponent-aware probabilistic simulation.
+
+======================================================================
+16. VALUE FUNCTION
+======================================================================
+
+The AI eventually needs to answer:
+
+"How good is this position?"
+
+Possible target:
+
+V(state) = probability of winning from state
+
+Example:
+
+State A:
+V = 0.73
+
+State B:
+V = 0.41
+
+This is much more useful than simply:
+
+"Board score = +4"
+
+because it directly relates to winning.
+
+However, intermediate auxiliary predictions can improve learning:
+
+- win probability
+- expected future life
+- probability of lethal
+- card advantage
+- board control
+- mana advantage
+- estimated opponent hand interaction
+- probability of drawing outs
+
+======================================================================
+17. POLICY NETWORK
+======================================================================
+
+The policy model should estimate:
+
+P(action | game state)
+
+Example:
+
+PLAY_LAND:
+0.48
+
+CAST_CREATURE:
+0.18
+
+CAST_REMOVAL:
+0.11
+
+ATTACK:
+0.21
+
+PASS:
+0.02
+
+This does NOT necessarily mean the highest-probability action is always
+chosen.
+
+A search system can use the policy as a guide rather than a final answer.
+
+Strong architecture:
+
+Policy Network
+      |
+      v
+Candidate actions
+      |
+      v
+Search
+      |
+      v
+Value estimates
+      |
+      v
+Final decision
+
+======================================================================
+18. TRAINING STRATEGY
+======================================================================
+
+Potential training phases:
+
+PHASE A
+-------
+Supervised learning from scripted/heuristic decisions.
+
+PHASE B
+-------
+Behavior cloning from strong recorded players, if legally usable data is
+available.
+
+PHASE C
+-------
+Self-play.
+
+PHASE D
+-------
+Search-enhanced self-play.
+
+PHASE E
+-------
+Population-based training.
+
+PHASE F
+-------
+Specialized opponents and styles.
+
+Do not assume that more games automatically makes the AI smarter.
+
+Bad training data can make the model very good at playing bad Magic.
+
+======================================================================
+19. SELF-PLAY
+======================================================================
+
+A simple self-play cycle:
+
+1. Agent A plays Agent B.
+2. Record complete trajectory.
+3. Determine winner.
+4. Store:
+   state
+   action
+   legal actions
+   reward
+   hidden information
+5. Train model.
+6. Evaluate new model.
+7. Promote if stronger.
+8. Repeat.
+
+Potential problem:
+Both agents can learn the same bad strategies.
+
+Solution:
+Maintain diverse opponents.
+
+Population:
+
+Aggro
+Control
+Midrange
+Combo
+Tempo
+Random
+Old versions
+Heuristic
+Specialized anti-meta agents
+
+This creates more robust training.
+
+======================================================================
+20. REWARD DESIGN
+======================================================================
+
+PRIMARY REWARD
+--------------
+Win:
++1
+
+Loss:
+0 or -1
+
+But pure win/loss rewards can be sparse.
+
+Potential auxiliary signals:
+
+- damage dealt
+- life preserved
+- mana efficiency
+- card advantage
+- board development
+- successful interaction
+- lethal avoidance
+
+IMPORTANT:
+Auxiliary rewards can create bad behavior.
+
+Example:
+If you reward life too strongly, an AI might become excessively passive.
+
+Therefore:
+Win probability should remain the central objective.
+
+======================================================================
+21. HIDDEN INFORMATION
+======================================================================
+
+This is one of the biggest milestones.
+
+The AI must distinguish:
+
+OBSERVABLE:
+- opponent battlefield
+- visible graveyard
+- life
+- tapped lands
+- revealed cards
+- known commander
+
+HIDDEN:
+- opponent hand
+- unknown library
+- unrevealed cards
+
+The AI should maintain a belief distribution.
+
+Example:
+
+Opponent archetype:
+Control
+
+Known cards:
+Counterspell
+
+Unknown hand:
+Potentially:
+- 35% removal
+- 25% counterspell
+- 20% draw
+- 20% unknown
+
+These probabilities should update after every observation.
+
+======================================================================
+22. OPPONENT MODELING
+======================================================================
+
+The AI should eventually ask:
+
+"What kind of opponent am I playing?"
+
+Potential features:
+
+- deck archetype
+- risk tolerance
+- bluff frequency
+- timing patterns
+- aggression
+- interaction frequency
+- preferred lines
+- known cards
+- previous decisions
+
+Long-term idea:
+Maintain an opponent model.
+
+Example:
+
+Opponent Profile:
+--------------------------------
+Aggression:       0.81
+Bluff frequency:  0.47
+Removal density:  0.72
+Counter density:  0.64
+Risk tolerance:   0.77
+--------------------------------
+
+The agent can then adjust decisions.
+
+======================================================================
+23. BLUFFING
+======================================================================
+
+A strong MTG AI should eventually understand that a card's value can
+come from what the opponent THINKS you have.
+
+Example:
+
+You have no counterspell.
+
+You leave two mana untapped.
+
+Opponent may believe you have one.
+
+This creates strategic value even though no spell was actually cast.
+
+The AI therefore needs to reason about:
+
+"What does my opponent think I have?"
+
+And:
+
+"What does my opponent think I will do?"
+
+This eventually becomes recursive reasoning.
+
+======================================================================
+24. DECK ARCHETYPES
+======================================================================
+
+Start with a small number of archetypes.
+
+Suggested:
+
+AGGRO
+-----
+Fast threats.
+Low curve.
+Pressure life total.
+
+CONTROL
+-------
+Removal.
+Countermagic.
+Card advantage.
+Long game.
+
+MIDRANGE
+--------
+Efficient threats.
+Interaction.
+Value.
+
+COMBO
+-----
+Assemble specific engine.
+
+TEMPO
+-----
+Efficient threats + disruption.
+
+Each archetype should have several representative decks.
+
+======================================================================
+25. COMMANDER
+======================================================================
+
+DO NOT START WITH COMMANDER.
+
+Commander adds:
+- 100-card decks
+- singleton
+- commander zone
+- commander tax
+- commander damage
+- multiplayer
+- politics
+- threat assessment
+- alliances
+- kingmaking
+- hugely expanded action space
+
+Suggested order:
+
+1v1 20-life
+    ->
+1v1 full rules
+    ->
+1v1 larger card pool
+    ->
+Commander 1v1
+    ->
+4-player Commander
+
+MULTIPLAYER COMMANDER
+---------------------
+This should be treated as a separate research problem.
+
+The AI must decide:
+- who is winning
+- who is dangerous
+- whether to attack
+- whether to cooperate
+- when to become the threat
+- political promises
+- kingmaking decisions
+
+This can become an entire second project.
+
+======================================================================
+26. UI / PRODUCT VISION
+======================================================================
+
+Eventually create a desktop/web application.
+
+Main screen:
+
++--------------------------------------------------------+
+| Opponent Life: 18                 Your Life: 24        |
++--------------------------------------------------------+
+|                                                        |
+|                 OPPONENT BOARD                         |
+|                                                        |
+|--------------------------------------------------------|
+|                                                        |
+|                     STACK                              |
+|                                                        |
+|--------------------------------------------------------|
+|                                                        |
+|                    YOUR BOARD                          |
+|                                                        |
++--------------------------------------------------------+
+| Hand: [Card] [Card] [Card] [Card] [Card]              |
++--------------------------------------------------------+
+
+Side panel:
+
+AI DECISION
+-----------
+Chosen action:
+Cast Lightning Bolt
+
+Win probability:
+61.2%
+
+Best alternatives:
+1. Cast Lightning Bolt — 61.2%
+2. Attack — 58.9%
+3. Pass — 54.3%
+
+Reason:
+Removes the opponent's only profitable blocker while
+preserving future mana flexibility.
+
+Important:
+The explanation should be generated AFTER the underlying decision,
+not used to fake the decision.
+
+======================================================================
+27. AI COACH MODE
+======================================================================
+
+A potential product feature:
+
+Replay a game.
+
+The AI marks:
+
+GREEN
+Good play.
+
+YELLOW
+Suboptimal.
+
+RED
+Major mistake.
+
+Example:
+
+TURN 7
+-------
+You cast Creature A.
+
+AI assessment:
+Suboptimal.
+
+Expected win chance before:
+63%
+
+After:
+48%
+
+Recommended:
+Hold the creature and represent interaction.
+
+Then allow:
+
+[SHOW ALTERNATIVE LINE]
+
+The user can play the position again.
+
+This is potentially one of the strongest monetizable features.
+
+======================================================================
+28. "PLAY AGAINST THE AI"
+======================================================================
+
+The final game mode should offer levels.
+
+BEGINNER
+--------
+Simple heuristics.
+
+INTERMEDIATE
+------------
+Search + value model.
+
+ADVANCED
+--------
+Policy + search.
+
+EXPERT
+------
+Imperfect information + opponent modeling.
+
+NIGHTMARE
+---------
+Maximum search budget and strongest model.
+
+Each difficulty should be empirically calibrated.
+
+Do not simply add randomness to make AI "harder."
+
+======================================================================
+29. HUMAN LEARNING LOOP
+======================================================================
+
+Ideal user experience:
+
+1. User plays.
+2. AI observes.
+3. Game ends.
+4. AI identifies mistakes.
+5. User reviews mistakes.
+6. User replays critical positions.
+7. User asks questions.
+8. User plays again.
+9. Personal statistics improve.
+
+The application should create a feedback loop:
+
+PLAY
+ -> ANALYZE
+ -> LEARN
+ -> REPLAY
+ -> PLAY BETTER
+
+======================================================================
+30. LLM ROLE
+======================================================================
+
+LLM SHOULD NOT BE THE CORE DECISION MAKER.
+
+Good uses:
+
+- explain AI decisions
+- answer rules questions
+- summarize games
+- teach concepts
+- generate practice exercises
+- communicate with players
+- convert technical evaluation into natural language
+
+Bad use:
+
+Send entire game state to an LLM and ask:
+
+"What should I do?"
+
+Problems:
+- unreliable
+- expensive
+- inconsistent
+- limited precise search
+- hard to reproduce
+- difficult to train
+- not ideal for huge action spaces
+
+The LLM is the INTERFACE/TEACHER.
+
+The game-playing model is the PLAYER.
+
+======================================================================
+31. RULES ACCURACY
+======================================================================
+
+A game AI is only as good as the simulator.
+
+A subtle bug in the engine can train the AI on fake Magic.
+
+Therefore every rule subsystem needs tests.
+
+Examples:
+
+- damage
+- deathtouch
+- lifelink
+- indestructible
+- trample
+- first strike
+- double strike
+- flying
+- ward
+- hexproof
+- protection
+- counters
+- copying
+- replacement effects
+- triggers
+- sacrifice
+- discard
+- draw
+- exile
+- zone changes
+
+======================================================================
+32. TESTING STRATEGY
+======================================================================
+
+Use several layers of testing.
+
+UNIT TESTS
+----------
+Test individual rule components.
+
+INTEGRATION TESTS
+-----------------
+Test interactions between systems.
+
+SCENARIO TESTS
+--------------
+Create complete known game situations.
+
+PROPERTY TESTS
+--------------
+Randomly generate states/actions and check invariant rules.
+
+REGRESSION TESTS
+----------------
+Every bug becomes a permanent test.
+
+EXAMPLE REGRESSION TEST
+-----------------------
+Bug:
+A creature was incorrectly able to attack immediately.
+
+Test:
+Creature enters under a player's control this turn.
+Attempt attack.
+Expected:
+Illegal unless haste.
+
+This bug should never return.
+
+======================================================================
+33. ENGINE INVARIANTS
+======================================================================
+
+Examples:
+
+- A card instance can only exist in one zone at a time.
+- A card cannot simultaneously be in hand and battlefield.
+- Mana cannot become negative.
+- A player cannot have impossible life values unless an effect allows it.
+- A spell that has resolved should not remain on the stack.
+- A permanent cannot have an invalid controller.
+- A target must satisfy targeting restrictions when selected.
+- Illegal actions must never reach resolution.
+
+Add assertions aggressively during development.
+
+======================================================================
+34. DEBUGGING TOOLS
+======================================================================
+
+Build developer tools early.
+
+RECOMMENDED:
+
+Game Inspector
+--------------
+Display every state field.
+
+Stack Viewer
+------------
+Show exact stack objects.
+
+Priority Viewer
+---------------
+Show whose priority it is.
+
+Trigger Log
+-----------
+Show why each trigger was generated.
+
+Mana Log
+--------
+Track mana generation and payment.
+
+Action Log
+----------
+Every player action.
+
+State Diff
+----------
+Compare state before/after action.
+
+Replay System
+-------------
+Replay entire game step-by-step.
+
+Random Seed
+-----------
+Reproduce game exactly.
+
+These tools can save enormous development time.
+
+======================================================================
+35. REPLAY FORMAT
+======================================================================
+
+Store:
+
+game_id
+seed
+rules_version
+card_database_version
+decklists
+initial_game_state
+actions
+random_events
+winner
+final_state
+
+Potential event:
+
+{
+  "turn": 4,
+  "phase": "main_1",
+  "player": 0,
+  "action": "CAST_SPELL",
+  "card": "Lightning Bolt",
+  "targets": ["creature_109"],
+  "mana": ["red"]
+}
+
+A replay should be deterministic.
+
+======================================================================
+36. VERSION EVERYTHING
+======================================================================
+
+Track:
+
+rules engine version
+card database version
+AI model version
+training dataset version
+search version
+evaluation version
+
+Example:
+
+Game:
+rules=0.42
+cards=2026-08
+policy=1.7.2
+value=2.1.4
+search=0.9.3
+
+This is essential.
+
+Otherwise an old replay may behave differently after an engine update.
+
+======================================================================
+37. PERFORMANCE
+======================================================================
+
+Do not optimize prematurely.
+
+Correctness first.
+
+Later, likely bottlenecks:
+
+- cloning GameState
+- action generation
+- rules resolution
+- simulation
+- neural network inference
+- search tree memory
+
+Potential optimizations:
+
+- compact state encoding
+- integer IDs
+- precomputed card data
+- vectorized inference
+- batching model evaluations
+- transposition tables
+- action caching
+- parallel rollouts
+- GPU inference
+- multiprocessing
+
+======================================================================
+38. TRANSPOSITION TABLES
+======================================================================
+
+Different action sequences can sometimes reach equivalent states.
+
+Instead of evaluating the same state repeatedly:
+
+state hash
+    ->
+cached evaluation
+
+Possible key:
+
+hash(
+  board
+  hand
+  life
+  stack
+  turn
+  priority
+  known hidden info
+)
+
+Be careful:
+With hidden information, the information set matters.
+
+======================================================================
+39. TRAINING HARDWARE
+======================================================================
+
+Early development does NOT require enormous hardware.
+
+Start with CPU for:
+- engine development
+- tests
+- simple heuristics
+
+GPU becomes important for:
+- neural network training
+- large-scale self-play
+- batched inference
+
+The most important optimization early is not "buy a massive GPU."
+
+It is:
+Make the simulator fast.
+
+If the engine can simulate:
+100 games/sec
+
+then:
+1,000,000 games takes ~2.78 hours.
+
+If it can simulate:
+10,000 games/sec
+
+then:
+1,000,000 games takes ~100 seconds.
+
+Simulation throughput can completely change the project.
+
+======================================================================
+40. DATA PIPELINE
+======================================================================
+
+Potential pipeline:
+
+Game Engine
+    |
+    v
+Self-Play Workers
+    |
+    v
+Trajectory Files
+    |
+    v
+Dataset Builder
+    |
+    v
+Training
+    |
+    v
+Model Registry
+    |
+    v
+Evaluation
+    |
+    v
+Promotion
+
+Store training examples efficiently.
+
+Possible fields:
+
+state_encoding
+legal_action_mask
+chosen_action
+policy_target
+value_target
+game_result
+turn
+deck_id
+opponent_id
+hidden_information
+search_statistics
+
+======================================================================
+41. MODEL REGISTRY
+======================================================================
+
+Keep every model.
+
+Example:
+
+models/
+  v0/
+  v1/
+  v2/
+  v3/
+
+Metadata:
+
+model_id
+training_date
+dataset_version
+architecture
+training_steps
+environment_version
+win_rate_vs_baselines
+average_decision_time
+
+Never overwrite the strongest model.
+
+======================================================================
+42. EVALUATION FRAMEWORK
+======================================================================
+
+Every model gets a standardized evaluation suite.
+
+Example:
+
+TEST SET
+--------
+10,000 games vs random
+10,000 vs heuristic
+10,000 vs previous model
+
+Metrics:
+
+win rate
+first-player win rate
+second-player win rate
+average turn count
+average decision latency
+average search nodes
+blunder rate
+resource efficiency
+
+Also create fixed benchmark situations.
+
+Examples:
+
+- lethal available
+- must block
+- removal timing
+- combat trick
+- counterspell decision
+- sacrifice decision
+- card advantage decision
+- tempo decision
+
+These can reveal specific weaknesses.
+
+======================================================================
+43. MISTAKE DETECTION
+======================================================================
+
+A human "mistake" should not simply mean:
+
+"The AI chose another action."
+
+Instead define:
+
+Expected value:
+EV(best line) = 0.72
+
+Human line:
+EV = 0.51
+
+Difference:
+0.21
+
+Then classify:
+
+Tiny:
+< 0.02
+
+Minor:
+0.02–0.05
+
+Meaningful:
+0.05–0.10
+
+Major:
+0.10–0.20
+
+Critical:
+> 0.20
+
+Thresholds should be adjustable and validated.
+
+======================================================================
+44. SEARCH EXPLANATIONS
+======================================================================
+
+The system should retain search statistics.
+
+Example:
+
+Action A:
+estimated win chance = 0.58
+
+Action B:
+estimated win chance = 0.67
+
+Action C:
+estimated win chance = 0.43
+
+Then explanation can be based on actual evidence.
+
+Potential explanation template:
+
+"I chose B because it increases the estimated chance of winning by
+approximately 9 percentage points. The largest difference comes from
+preserving your removal spell while developing another threat."
+
+This is much better than generating an explanation disconnected from the
+decision process.
+
+======================================================================
+45. DECK ANALYSIS
+======================================================================
+
+Eventually allow users to upload decks.
+
+Analyze:
+
+- curve
+- mana base
+- colors
+- interaction
+- threats
+- card advantage
+- consistency
+- win conditions
+- mulligan quality
+
+Then simulate the deck.
+
+Potential output:
+
+Opening-hand keep rate:
+72%
+
+Turn-3 board development:
+4.1 average mana worth of permanents
+
+Interaction by turn 4:
+1.8 average available answers
+
+Estimated matchup:
+Aggro: 54%
+Control: 47%
+Midrange: 61%
+
+These values should come from simulation/modeling, not arbitrary scoring.
+
+======================================================================
+46. MULLIGAN AI
+======================================================================
+
+Mulligan decisions are a major strategic problem.
+
+The AI should eventually estimate:
+
+P(win | opening hand, deck, matchup)
+
+For each possible keep/mulligan decision.
+
+Eventually:
+
+Hand:
+Land
+Land
+Land
+Creature
+Removal
+Card draw
+Bomb
+
+Estimated win:
+64%
+
+Alternative mulligan:
+71%
+
+But the AI needs to account for:
+- London mulligan
+- matchup
+- play/draw
+- deck strategy
+- curve
+- mana requirements
+
+This can become its own research project.
+
+======================================================================
+47. SIDEBOARD / MATCH PLAY
+======================================================================
+
+For formats with sideboards:
+
+The AI should learn:
+- what cards matter
+- what to remove
+- matchup-specific strategies
+- play/draw differences
+
+Long-term match AI:
+
+Game 1
+ -> analyze opponent
+ -> infer archetype
+ -> sideboard
+ -> Game 2
+ -> update model
+ -> sideboard again
+
+======================================================================
+48. FORMAT SUPPORT
+======================================================================
+
+Do not support everything immediately.
+
+Recommended order:
+
+1. Custom simplified format
+2. Standard-like 1v1
+3. Modern-like 1v1
+4. Commander 1v1
+5. Multiplayer Commander
+6. Other formats
+
+A strong engine can eventually support many formats.
+
+======================================================================
+49. ETHICAL / LEGAL / PRODUCT CONSIDERATIONS
+======================================================================
+
+Be careful about:
+- Wizards of the Coast trademarks
+- copyrighted card images
+- copyrighted card text/database redistribution
+- terms of service of online clients
+- botting/automation restrictions
+- scraping
+- competitive cheating
+
+Do not build around violating another platform's rules.
+
+A safer commercial direction is:
+
+- standalone simulator
+- AI coach
+- replay analyzer
+- deck analysis
+- training software
+
+Integration with external clients can come much later and only where
+permitted.
+
+======================================================================
+50. COMMERCIALIZATION
+======================================================================
+
+Possible free tier:
+
+- basic AI opponent
+- limited games
+- basic replay
+
+Premium:
+
+- stronger AI
+- advanced coaching
+- unlimited analysis
+- deep mistake reports
+- deck simulation
+- matchup analysis
+- custom practice positions
+- tournament preparation
+
+Potential future products:
+
+1. MTG AI Coach
+2. MTG AI Opponent
+3. MTG Deck Analyzer
+4. MTG Replay Analyzer
+5. MTG Training Simulator
+6. Developer/API access
+7. Tournament preparation platform
+
+Possible business model:
+
+FREE
+----
+Limited analysis.
+
+SUBSCRIPTION
+------------
+Monthly AI access.
+
+ONE-TIME
+--------
+Premium desktop version.
+
+B2B/API
+-------
+AI analysis API for other MTG tools.
+
+======================================================================
+51. DO NOT CHASE MONEY TOO EARLY
+======================================================================
+
+The first goal is:
+
+"Can I make an AI that genuinely plays Magic?"
+
+The second goal:
+
+"Can I make it significantly better?"
+
+The third:
+
+"Can humans enjoy playing against it?"
+
+The fourth:
+
+"Can it teach humans?"
+
+Only then:
+
+"Can this become a business?"
+
+If monetization becomes the main goal too early, the project may turn into
+a generic SaaS product instead of a meaningful engineering project.
+
+======================================================================
+52. DAILY DEVELOPMENT LOOP
+======================================================================
+
+A strong development loop:
+
+1. Pick ONE technical problem.
+2. Implement it.
+3. Write tests.
+4. Run thousands of simulated games.
+5. Inspect failures.
+6. Fix the engine.
+7. Commit the change.
+8. Record what was learned.
+9. Benchmark again.
+
+Keep a development journal.
+
+Example:
+
+DATE: 2026-09-14
+
+Problem:
+Triggered abilities sometimes resolved in incorrect order.
+
+Cause:
+Triggers were inserted directly rather than APNAP-sorted.
+
+Fix:
+Added trigger collection phase and active-player ordering.
+
+Tests added:
+17
+
+Games tested:
+250,000
+
+Result:
+No recurrence.
+
+This journal becomes extremely valuable over a multi-year project.
+
+======================================================================
+53. GIT / PROJECT ORGANIZATION
+======================================================================
+
+Suggested repository:
+
+mtg-ai/
+|
++-- engine/
+|   +-- game/
+|   +-- cards/
+|   +-- zones/
+|   +-- stack/
+|   +-- combat/
+|   +-- effects/
+|   +-- rules/
+|   +-- actions/
+|
++-- ai/
+|   +-- agents/
+|   +-- search/
+|   +-- policy/
+|   +-- value/
+|   +-- opponent_model/
+|
++-- training/
+|   +-- self_play/
+|   +-- datasets/
+|   +-- pipelines/
+|
++-- evaluation/
+|   +-- benchmarks/
+|   +-- reports/
+|
++-- replay/
+|
++-- frontend/
+|
++-- tools/
+|   +-- card_import/
+|   +-- debugging/
+|   +-- visualization/
+|
++-- docs/
+|
++-- tests/
+
+Keep the engine independent from the UI.
+
+======================================================================
+54. LANGUAGE / TECHNOLOGY OPTIONS
+======================================================================
+
+A reasonable architecture:
+
+ENGINE
+------
+C++ or Rust
+OR
+Python initially, then optimize bottlenecks.
+
+Python is excellent for:
+- AI experiments
+- rapid prototyping
+- machine learning
+- data analysis
+
+Rust/C++ are useful later for:
+- massive simulation throughput
+- memory efficiency
+- deterministic high-performance engine
+
+MODEL TRAINING
+--------------
+Python
+PyTorch
+
+DATA
+----
+JSON initially
+Parquet / binary formats later
+
+API
+---
+FastAPI or equivalent
+
+FRONTEND
+--------
+React / TypeScript
+or a game-engine UI
+
+VISUAL GAME CLIENT
+------------------
+Godot, Unity, or web rendering
+
+Suggested strategy:
+Start in Python for speed of development.
+Move the simulation hot path to Rust/C++ only when profiling proves it
+is necessary.
+
+======================================================================
+55. AI OBSERVATION ENCODING
+======================================================================
+
+The model cannot consume arbitrary Python objects directly.
+
+Create a stable numerical representation.
+
+Potential groups:
+
+PLAYER FEATURES
+---------------
+life
+mana
+hand size
+library size
+graveyard size
+commander information
+
+BATTLEFIELD FEATURES
+--------------------
+card identity
+type
+power
+toughness
+tapped
+counters
+keywords
+temporary effects
+
+STACK FEATURES
+--------------
+object types
+targets
+controllers
+sources
+
+TURN FEATURES
+-------------
+turn number
+phase
+step
+priority
+
+HIDDEN INFORMATION
+------------------
+belief distributions
+
+The exact encoding will likely change many times.
+
+Version it.
+
+======================================================================
+56. ACTION MASKING
+======================================================================
+
+A neural policy must know which actions are legal.
+
+Instead of asking the model to choose from every possible action in the
+universe:
+
+Use:
+
+policy logits
++
+legal action mask
+
+Example:
+
+1000 theoretical actions
+
+Only 37 are legal.
+
+Mask the other 963.
+
+This dramatically improves learning.
+
+======================================================================
+57. CARD EMBEDDINGS
+======================================================================
+
+For larger card pools, represent cards using embeddings.
+
+Possible input features:
+
+- mana cost
+- colors
+- card types
+- keywords
+- structured abilities
+- stats
+- oracle text embedding
+- learned card identity embedding
+
+Important:
+Pure text embeddings are probably insufficient for precise gameplay.
+
+A structured semantic representation should exist.
+
+======================================================================
+58. CURRICULUM LEARNING
+======================================================================
+
+Do not throw the AI into full Magic immediately.
+
+Teach progressively.
+
+Level 1:
+Play lands.
+
+Level 2:
+Attack.
+
+Level 3:
+Block.
+
+Level 4:
+Cast creatures.
+
+Level 5:
+Cast removal.
+
+Level 6:
+Respond to spells.
+
+Level 7:
+Plan multiple turns.
+
+Level 8:
+Handle hidden information.
+
+Level 9:
+Bluff.
+
+Level 10:
+Complex interactions.
+
+This is called curriculum learning.
+
+======================================================================
+59. SPECIALIZED TRAINING TASKS
+======================================================================
+
+Create mini-environments for specific skills.
+
+COMBAT TASK
+-----------
+Choose optimal attackers/blockers.
+
+REMOVAL TASK
+------------
+Choose when to remove threat.
+
+MANA TASK
+---------
+Optimize mana usage.
+
+MULLIGAN TASK
+-------------
+Choose keep/mulligan.
+
+STACK TASK
+----------
+Resolve complex interaction.
+
+LETHAL TASK
+-----------
+Find lethal.
+
+These focused tasks can help develop specific components before combining
+them into a full agent.
+
+======================================================================
+60. PUZZLE MODE
+======================================================================
+
+This could become a great product feature.
+
+Present a fixed position:
+
+"Find the best line."
+
+Give:
+- board
+- hand
+- life
+- stack
+- opponent information
+
+The user submits a line.
+
+AI grades it.
+
+This creates:
+- training
+- content
+- leaderboards
+- daily challenges
+
+Eventually:
+Daily MTG AI Puzzle
+
+======================================================================
+61. EXPLORATION
+======================================================================
+
+Self-play can become repetitive.
+
+Add controlled exploration.
+
+Possible methods:
+- epsilon-greedy
+- temperature sampling
+- Dirichlet noise
+- diverse opponent pool
+- random opening hands
+- strategic perturbation
+
+But avoid excessive random play.
+
+The model should increasingly exploit strong strategies.
+
+======================================================================
+62. MODEL IMPROVEMENT LOOP
+======================================================================
+
+The ideal long-term cycle:
+
+ENGINE
+   ↓
+STRONGER SIMULATION
+   ↓
+MORE SELF-PLAY
+   ↓
+BETTER DATA
+   ↓
+BETTER POLICY
+   ↓
+BETTER VALUE
+   ↓
+BETTER SEARCH
+   ↓
+STRONGER PLAY
+   ↓
+HARDER TRAINING OPPONENTS
+   ↓
+MORE DATA
+
+This is the core "flywheel" of the project.
+
+======================================================================
+63. RESEARCH QUESTIONS TO KEEP
+======================================================================
+
+Maintain a document called:
+
+research_questions.md
+
+Possible questions:
+
+1. What search algorithm works best for MTG?
+2. How should hidden information be represented?
+3. How much history does the model need?
+4. Does MCTS outperform a learned policy?
+5. How large should the action representation be?
+6. Can the model learn bluffing?
+7. Can the model infer deck archetype quickly?
+8. How much does opponent modeling help?
+9. Can an LLM improve explanations without affecting decisions?
+10. How does performance change with search budget?
+11. How much simulation is required before skill improves?
+12. Can models transfer between decks?
+13. Can an AI learn new cards without retraining completely?
+14. Can the AI generalize to previously unseen interactions?
+15. How should multiplayer politics be modeled?
+
+These questions can turn the project into genuine AI experimentation.
+
+======================================================================
+64. IMPORTANT: GENERALIZATION
+======================================================================
+
+One of the biggest long-term challenges:
+
+Training on known decks may produce an AI that only memorizes patterns.
+
+A strong system should generalize.
+
+Test it against:
+- unseen decks
+- unseen card combinations
+- unfamiliar archetypes
+- new card releases
+- altered environments
+
+Possible milestone:
+
+The AI receives a new deck it has never seen.
+
+It does not immediately become useless.
+
+Instead it analyzes:
+- mana
+- card types
+- threats
+- interaction
+- probable plan
+
+and adapts.
+
+======================================================================
+65. NEW CARD LEARNING
+======================================================================
+
+A major long-term product feature:
+
+NEW SET RELEASE
+      |
+      v
+CARD DATA IMPORT
+      |
+      v
+SEMANTIC PARSING
+      |
+      v
+TEST CARD INTERACTIONS
+      |
+      v
+SIMULATION
+      |
+      v
+AI UPDATE
+
+The goal eventually should be:
+Adding a new card does not require rewriting the AI.
+
+======================================================================
+66. SAFETY / FAILURE MODE
+======================================================================
+
+The AI should fail gracefully.
+
+If the engine encounters:
+- unsupported card
+- unknown mechanic
+- ambiguous implementation
+- rules error
+
+Do NOT silently continue.
+
+Instead:
+
+UNSUPPORTED CARD
+----------------
+Mark state as unsupported.
+
+Do not allow the AI to train on fake outcomes.
+
+This is essential.
+
+======================================================================
+67. PERFORMANCE DASHBOARD
+======================================================================
+
+Build a dashboard eventually showing:
+
+ENGINE
+------
+games/sec
+states/sec
+actions/sec
+memory usage
+
+AI
+--
+win rate
+decision latency
+search depth
+nodes searched
+model confidence
+
+TRAINING
+--------
+episodes
+samples
+loss
+value accuracy
+policy accuracy
+GPU utilization
+
+EVALUATION
+----------
+win rate by archetype
+win rate by play/draw
+win rate by deck
+
+======================================================================
+68. GOAL POSTS
+======================================================================
+
+GOOD EARLY GOAL
+---------------
+AI can beat random.
+
+GREAT GOAL
+----------
+AI can beat the heuristic agent.
+
+SERIOUS GOAL
+------------
+AI can consistently beat previous versions.
+
+VERY SERIOUS GOAL
+-----------------
+AI can beat competent scripted opponents.
+
+MAJOR MILESTONE
+---------------
+Human players say:
+"This AI makes good Magic decisions."
+
+ULTIMATE GOAL
+-------------
+A strong human player can use it as a legitimate training partner.
+
+======================================================================
+69. WHAT NOT TO BUILD YET
+======================================================================
+
+Do NOT prioritize:
+
+- fancy animations
+- account system
+- mobile app
+- marketplace
+- social features
+- cosmetics
+- AI voice
+- Discord bot
+- card collection system
+- monetization
+- huge deck database UI
+
+These are distractions until the core AI works.
+
+======================================================================
+70. FIRST 30 DEVELOPMENT TASKS
+======================================================================
+
+1. Create repository.
+2. Create Game object.
+3. Create Player object.
+4. Create CardDefinition.
+5. Create CardInstance.
+6. Create Zone system.
+7. Create mana system.
+8. Create phase system.
+9. Create turn progression.
+10. Create priority system.
+11. Create stack.
+12. Create basic spell.
+13. Create creature.
+14. Create combat.
+15. Create state-based actions.
+16. Create triggered effect framework.
+17. Create legal action generator.
+18. Create random agent.
+19. Create deterministic RNG.
+20. Create replay log.
+21. Create basic heuristic agent.
+22. Run 10,000 games.
+23. Find engine failures.
+24. Add regression tests.
+25. Expand card pool.
+26. Add search prototype.
+27. Benchmark simulation speed.
+28. Build state serializer.
+29. Build game inspector.
+30. Start AI experiment notebook.
+
+======================================================================
+71. FIRST MAJOR MILESTONE
+======================================================================
+
+Do NOT define milestone 1 as:
+
+"Make an AI that is good at Magic."
+
+That is too vague.
+
+Define it as:
+
+MILESTONE 1
+-----------
+"Two simple decks can play 100,000 deterministic simulated games with
+correct rules, reproducible outcomes, legal actions, complete logs, and
+zero unexplained engine failures."
+
+Then:
+
+MILESTONE 2
+-----------
+"An AI using simple heuristics consistently beats the random agent."
+
+MILESTONE 3
+-----------
+"A search agent consistently beats the heuristic agent."
+
+MILESTONE 4
+-----------
+"A learned model beats the search baseline under a fixed compute budget."
+
+MILESTONE 5
+-----------
+"An agent can play a meaningful subset of real Magic."
+
+======================================================================
+72. PERSONAL PROJECT PHILOSOPHY
+======================================================================
+
+This is a long-term passion project.
+
+That means:
+
+You do NOT need to finish it quickly.
+
+It is okay to rebuild major systems.
+
+It is okay to spend weeks learning:
+- reinforcement learning
+- MCTS
+- imperfect-information games
+- PyTorch
+- game engines
+- probability
+- optimization
+
+Every difficult problem is part of the project.
+
+Do not judge progress only by visible features.
+
+Learning how to correctly model priority can be more valuable than adding
+50 cards.
+
+======================================================================
+73. WHEN YOU GET STUCK
+======================================================================
+
+Use this procedure:
+
+1. Reproduce the problem.
+2. Make a minimal test case.
+3. Inspect the exact game state.
+4. Identify which subsystem is responsible.
+5. Write a regression test.
+6. Fix it.
+7. Verify thousands of random games.
+8. Document the lesson.
+
+Never fix a complex bug only by adding another special case.
+
+Ask:
+"Why did the architecture allow this bug?"
+
+======================================================================
+74. WHEN THE AI MAKES A BAD PLAY
+======================================================================
+
+Do not immediately change the model.
+
+First determine:
+
+Was the rules engine correct?
+
+Was the action generator complete?
+
+Was the action encoded correctly?
+
+Was the state encoded correctly?
+
+Was hidden information handled correctly?
+
+Was search deep enough?
+
+Was the value function wrong?
+
+Was the training target wrong?
+
+Was the opponent model wrong?
+
+Was exploration too high?
+
+Only then modify the AI.
+
+Otherwise you may "fix" symptoms while preserving the real problem.
+
+======================================================================
+75. IDEAL FINAL PRODUCT
+======================================================================
+
+Imagine opening the finished application.
+
+You import your deck.
+
+The system knows the deck.
+
+You choose:
+
+PLAY AI
+
+The AI has a full deck and plays against you.
+
+After the match:
+
+MATCH REVIEW
+------------
+
+Overall:
+7.8 / 10
+
+Biggest mistake:
+Turn 6
+
+Missed opportunity:
+You had a 71% win-probability line available.
+
+Mulligan:
+Correct
+
+Combat:
+Excellent
+
+Resource management:
+Average
+
+Interaction timing:
+Needs work
+
+Then:
+
+[REPLAY TURN 6]
+
+You can rewind.
+
+The AI shows:
+- what you did
+- what it expected
+- alternative plays
+- how each line changes win probability
+
+Then:
+
+[PLAY THIS POSITION]
+
+Now you try it yourself.
+
+This transforms the AI from:
+"computer opponent"
+
+into:
+"training partner."
+
+======================================================================
+76. ULTIMATE VISION
+======================================================================
+
+The ultimate vision is not simply:
+
+"Build an AI that plays Magic."
+
+The bigger vision is:
+
+BUILD AN ARTIFICIAL INTELLIGENCE RESEARCH PLATFORM
+FOR STRATEGIC CARD GAMES.
+
+Magic is the first environment.
+
+Eventually the technology could generalize to:
+- other card games
+- tactical games
+- turn-based strategy games
+- imperfect-information games
+
+This makes the project technically valuable beyond MTG.
+
+======================================================================
+77. FINAL DEVELOPMENT CHECKLIST
+======================================================================
+
+Before adding a new feature, ask:
+
+[ ] Does it improve the core simulator?
+[ ] Does it improve AI capability?
+[ ] Does it improve evaluation?
+[ ] Does it improve debugging?
+[ ] Is it testable?
+[ ] Can it be reproduced?
+[ ] Does it increase technical debt?
+[ ] Is there a simpler implementation?
+[ ] Does it belong now or later?
+
+Before calling the AI "better", ask:
+
+[ ] Did it beat the same benchmark?
+[ ] Was compute budget equal?
+[ ] Was the opponent pool fixed?
+[ ] Was the test statistically significant?
+[ ] Did it improve more than one matchup?
+[ ] Did it introduce regressions?
+
+======================================================================
+78. NORTH STAR
+======================================================================
+
+ONE SENTENCE:
+
+"Build an AI that can learn to play Magic rather than an AI that was simply
+programmed to play Magic."
+
+That distinction should guide the entire project.
+
+The rules engine tells the computer what Magic IS.
+
+The AI learns how to PLAY it.
+
+The search system helps it THINK.
+
+The opponent model helps it ANTICIPATE.
+
+The training system helps it IMPROVE.
+
+The product layer lets humans LEARN from it.
+
+That is the project.
+
+======================================================================
+END OF DOCUMENT
+======================================================================

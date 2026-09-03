@@ -1,0 +1,61 @@
+[gd_scene format=3 uid="uid://u757y8cok6mr"]
+
+[ext_resource type="Script" path="res://scripts/ui/spectator_hud.gd" id="1_5rdhf"]
+
+[node name="CanvasLayer" type="CanvasLayer" unique_id=862882382]
+script = ExtResource("1_5rdhf")
+
+[node name="Panel" type="Panel" parent="." unique_id=197155278]
+offset_left = 16.0
+offset_top = 10.0
+offset_right = 1121.0
+offset_bottom = 68.0
+
+[node name="VBox" type="VBoxContainer" parent="Panel" unique_id=530419081]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TopRow" type="HBoxContainer" parent="Panel/VBox" unique_id=1578799074]
+layout_mode = 2
+
+[node name="LblTurn" type="Label" parent="Panel/VBox/TopRow" unique_id=1539681593]
+layout_mode = 2
+text = "1"
+
+[node name="LblAction" type="Label" parent="Panel/VBox/TopRow" unique_id=1124360753]
+layout_mode = 2
+text = "0"
+
+[node name="LblLifeP0" type="Label" parent="Panel/VBox/TopRow" unique_id=771292497]
+layout_mode = 2
+text = "20"
+
+[node name="LblLifeP1" type="Label" parent="Panel/VBox/TopRow" unique_id=1875808029]
+layout_mode = 2
+text = "20"
+
+[node name="BotRow" type="HBoxContainer" parent="Panel/VBox" unique_id=1803083522]
+layout_mode = 2
+
+[node name="BtnBack" type="Button" parent="Panel/VBox/BotRow" unique_id=525980285]
+layout_mode = 2
+text = "Back"
+
+[node name="BtnPlayPause" type="Button" parent="Panel/VBox/BotRow" unique_id=807603946]
+layout_mode = 2
+text = "Play/Pause"
+
+[node name="BtnForward" type="Button" parent="Panel/VBox/BotRow" unique_id=1921376560]
+layout_mode = 2
+text = "Forward"
+
+[node name="LblProgress" type="Label" parent="Panel/VBox/BotRow" unique_id=1147344177]
+layout_mode = 2
+text = "Pogress"
+
+[node name="SpeedSlider" type="HSlider" parent="Panel/VBox/BotRow" unique_id=718701011]
+layout_mode = 2

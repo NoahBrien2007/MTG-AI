@@ -11,9 +11,14 @@ config_version=5
 [application]
 
 config/name="mtgAI"
-run/main_scene="uid://gulbpqe4yxrt"
+run/main_scene="res://scenes/MainMenu.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
+
+[autoload]
+
+GameConfig="*res://scripts/game/game_config.gd"
+CardTextures="*res://scripts/cards/card_texture_loader.gd"
 
 [display]
 

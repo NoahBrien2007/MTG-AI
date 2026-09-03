@@ -1,0 +1,23 @@
+{
+  "deck_name": "Botboy's Deck (Izzet)",
+  "format": "Standard",
+  "mainboard": [
+	{ "name": "Eddymurk Crab", "count": 3, "type": "Creature" },
+	{ "name": "Hydro-Man, Fluid Felon", "count": 2, "type": "Creature" },
+	{ "name": "Slickshot Show-Off", "count": 4, "type": "Creature" },
+	{ "name": "Stormchaser's Talent", "count": 4, "type": "Enchantment" },
+	{ "name": "Burst Lightning", "count": 4, "type": "Instant" },
+	{ "name": "Opt", "count": 4, "type": "Instant" },
+	{ "name": "Shore Up", "count": 2, "type": "Instant" },
+	{ "name": "Spell Pierce", "count": 2, "type": "Instant" },
+	{ "name": "Vibrant Outburst", "count": 2, "type": "Instant" },
+	{ "name": "Island", "count": 7, "type": "Land" },
+	{ "name": "Multiversal Passage", "count": 2, "type": "Land" },
+	{ "name": "Riverpyre Verge", "count": 4, "type": "Land" },
+	{ "name": "Spirebluff Canal", "count": 4, "type": "Land" },
+	{ "name": "Steam Vents", "count": 4, "type": "Land" },
+	{ "name": "Boomerang Basics", "count": 4, "type": "Sorcery" },
+	{ "name": "Flow State", "count": 4, "type": "Sorcery" },
+	{ "name": "Sleight of Hand", "count": 4, "type": "Sorcery" }
+  ]
+}

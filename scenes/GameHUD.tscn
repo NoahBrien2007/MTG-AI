@@ -1,0 +1,360 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/game_hud.gd" id="1_hud"]
+
+[sub_resource type="StyleBoxFlat" id="Style_bar"]
+content_margin_left = 14.0
+content_margin_top = 6.0
+content_margin_right = 14.0
+content_margin_bottom = 6.0
+bg_color = Color(0.06, 0.07, 0.1, 0.82)
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.08)
+
+[sub_resource type="StyleBoxFlat" id="Style_bar_bottom"]
+content_margin_left = 14.0
+content_margin_top = 6.0
+content_margin_right = 14.0
+content_margin_bottom = 6.0
+bg_color = Color(0.06, 0.07, 0.1, 0.82)
+border_width_top = 1
+border_color = Color(1, 1, 1, 0.08)
+
+[sub_resource type="StyleBoxFlat" id="Style_panel"]
+content_margin_left = 12.0
+content_margin_top = 10.0
+content_margin_right = 12.0
+content_margin_bottom = 10.0
+bg_color = Color(0.06, 0.07, 0.1, 0.78)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.08)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="Style_preview"]
+content_margin_left = 6.0
+content_margin_top = 6.0
+content_margin_right = 6.0
+content_margin_bottom = 6.0
+bg_color = Color(0.06, 0.07, 0.1, 0.85)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="Style_prompt"]
+content_margin_left = 18.0
+content_margin_top = 6.0
+content_margin_right = 18.0
+content_margin_bottom = 6.0
+bg_color = Color(0.06, 0.07, 0.1, 0.7)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="StyleBoxFlat" id="Style_dialog"]
+content_margin_left = 32.0
+content_margin_top = 24.0
+content_margin_right = 32.0
+content_margin_bottom = 24.0
+bg_color = Color(0.08, 0.09, 0.13, 0.96)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.14)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="GameHUD" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="TopBar" type="PanelContainer" parent="."]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 44.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("Style_bar")
+
+[node name="HBox" type="HBoxContainer" parent="TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="LblTurn" type="Label" parent="TopBar/HBox"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 17
+text = "Turn 1"
+
+[node name="LblPhase" type="Label" parent="TopBar/HBox"]
+modulate = Color(1, 1, 1, 0.7)
+layout_mode = 2
+size_flags_vertical = 4
+text = "Main Phase 1"
+
+[node name="Spacer" type="Control" parent="TopBar/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="LblOppInfo" type="Label" parent="TopBar/HBox"]
+modulate = Color(1, 1, 1, 0.7)
+layout_mode = 2
+size_flags_vertical = 4
+text = "Hand 7 · Library 53"
+
+[node name="BtnOpponent" type="Button" parent="TopBar/HBox"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+disabled = true
+text = "Opponent  ♥ 20"
+
+[node name="BtnMenu" type="Button" parent="TopBar/HBox"]
+layout_mode = 2
+flat = true
+text = "Menu"
+
+[node name="PromptPanel" type="PanelContainer" parent="."]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -220.0
+offset_top = 56.0
+offset_right = 220.0
+offset_bottom = 92.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("Style_prompt")
+
+[node name="Prompt" type="Label" parent="PromptPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = ""
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Hint" type="Label" parent="."]
+modulate = Color(1, 1, 1, 0.5)
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 96.0
+offset_bottom = 118.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 13
+text = ""
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Preview" type="PanelContainer" parent="."]
+visible = false
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -268.0
+offset_top = -420.0
+offset_right = -12.0
+offset_bottom = -64.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_preview")
+
+[node name="VBox" type="VBoxContainer" parent="Preview"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Header" type="HBoxContainer" parent="Preview/VBox"]
+visible = false
+layout_mode = 2
+
+[node name="LblTitle" type="Label" parent="Preview/VBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+text = "Card"
+text_overrun_behavior = 3
+
+[node name="BtnClose" type="Button" parent="Preview/VBox/Header"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+tooltip_text = "Close (Esc)"
+flat = true
+text = "✕"
+
+[node name="Image" type="TextureRect" parent="Preview/VBox"]
+custom_minimum_size = Vector2(244, 340)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Text" type="RichTextLabel" parent="Preview/VBox"]
+visible = false
+custom_minimum_size = Vector2(244, 190)
+layout_mode = 2
+mouse_filter = 0
+bbcode_enabled = true
+scroll_active = true
+
+[node name="Choices" type="PanelContainer" parent="."]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -60.0
+offset_right = 200.0
+offset_bottom = 60.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("Style_dialog")
+
+[node name="VBox" type="VBoxContainer" parent="Choices"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="LblChoiceTitle" type="Label" parent="Choices/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+text = "Choose"
+
+[node name="Scroll" type="ScrollContainer" parent="Choices/VBox"]
+custom_minimum_size = Vector2(360, 0)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Content" type="VBoxContainer" parent="Choices/VBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="LogPanel" type="PanelContainer" parent="."]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = -262.0
+offset_right = 332.0
+offset_bottom = -64.0
+grow_vertical = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_panel")
+
+[node name="Log" type="RichTextLabel" parent="LogPanel"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/normal_font_size = 13
+bbcode_enabled = true
+scroll_following = true
+
+[node name="BottomBar" type="PanelContainer" parent="."]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -52.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("Style_bar_bottom")
+
+[node name="HBox" type="HBoxContainer" parent="BottomBar"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="BtnYou" type="Button" parent="BottomBar/HBox"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+disabled = true
+text = "You  ♥ 20"
+
+[node name="LblMana" type="Label" parent="BottomBar/HBox"]
+layout_mode = 2
+size_flags_vertical = 4
+text = "Mana: empty"
+
+[node name="LblYouInfo" type="Label" parent="BottomBar/HBox"]
+modulate = Color(1, 1, 1, 0.7)
+layout_mode = 2
+size_flags_vertical = 4
+text = "Library 53"
+
+[node name="Spacer" type="Control" parent="BottomBar/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ChkAutoPass" type="CheckBox" parent="BottomBar/HBox"]
+layout_mode = 2
+button_pressed = false
+text = "Auto-pass"
+tooltip_text = "Pass automatically when you have nothing meaningful to do."
+
+[node name="BtnCancel" type="Button" parent="BottomBar/HBox"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Cancel"
+
+[node name="BtnConfirm" type="Button" parent="BottomBar/HBox"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Confirm"
+
+[node name="BtnPass" type="Button" parent="BottomBar/HBox"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Pass  (Space)"
+
+[node name="GameOver" type="PanelContainer" parent="."]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -190.0
+offset_top = -80.0
+offset_right = 190.0
+offset_bottom = 80.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("Style_dialog")
+
+[node name="VBox" type="VBoxContainer" parent="GameOver"]
+layout_mode = 2
+theme_override_constants/separation = 18
+alignment = 1
+
+[node name="LblResult" type="Label" parent="GameOver/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Game over"
+horizontal_alignment = 1
+
+[node name="Buttons" type="HBoxContainer" parent="GameOver/VBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="BtnPlayAgain" type="Button" parent="GameOver/VBox/Buttons"]
+custom_minimum_size = Vector2(140, 40)
+layout_mode = 2
+text = "Play again"
+
+[node name="BtnMainMenu" type="Button" parent="GameOver/VBox/Buttons"]
+custom_minimum_size = Vector2(140, 40)
+layout_mode = 2
+text = "Main menu"
