@@ -80,8 +80,13 @@ class ValueNet(nn.Module):
 
     # ------------------------------------------------------------- forward
 
-    def forward(self, features: Tensor, card_ids: Tensor) -> Tensor:
-        """Returns the win logit, shape (batch,)."""
+    def state_embedding(self, features: Tensor, card_ids: Tensor) -> Tensor:
+        """The pooled state vector, before the win head.
+
+        Split out so the policy network can reuse this body: judging a position
+        and choosing a move need the same reading of the board, and the policy
+        has three hundred times more supervision to learn that reading from.
+        """
         spec = self.spec
         globals_ = features[:, : spec.global_features]
         cards = features[:, spec.global_features :].reshape(
@@ -103,8 +108,11 @@ class ValueNet(nn.Module):
             # -inf on empty slots would poison the max, so push them very low
             pooled.append(zone.masked_fill(mask == 0, -1e4).amax(dim=1).clamp(min=0.0))
 
-        hidden = self.trunk(torch.cat([globals_, *pooled], dim=-1))
-        return self.head(hidden).squeeze(-1)
+        return self.trunk(torch.cat([globals_, *pooled], dim=-1))
+
+    def forward(self, features: Tensor, card_ids: Tensor) -> Tensor:
+        """Returns the win logit, shape (batch,)."""
+        return self.head(self.state_embedding(features, card_ids)).squeeze(-1)
 
     @torch.no_grad()
     def win_probability(self, features: Tensor, card_ids: Tensor) -> Tensor:

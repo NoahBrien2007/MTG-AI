@@ -40,6 +40,7 @@ def synthetic_samples(games: int = 100, seed: int = 0) -> Samples:
     targets: list[float] = []
     turns: list[int] = []
     groups: list[int] = []
+    players: list[int] = []
 
     for game in range(games):
         # One hidden "true" advantage per game decides who wins.
@@ -93,6 +94,8 @@ def synthetic_samples(games: int = 100, seed: int = 0) -> Samples:
             targets.append(OUTCOME_TO_TARGET[outcome])
             turns.append(turn)
             groups.append(game)
+            # Alternate the deciding seat, as an unbiased recording does.
+            players.append(step % 2)
 
     return Samples(
         features=np.stack(features),
@@ -100,6 +103,7 @@ def synthetic_samples(games: int = 100, seed: int = 0) -> Samples:
         targets=np.asarray(targets, dtype=np.float32),
         turns=np.asarray(turns, dtype=np.int32),
         groups=np.asarray(groups, dtype=np.int32),
+        players=np.asarray(players, dtype=np.int32),
         spec=spec,
     )
 
@@ -130,7 +134,7 @@ def write_synthetic_dataset(path: str | Path, games: int = 100, seed: int = 0) -
 
         for i in range(len(samples)):
             handle.write(json.dumps({
-                "player": int(i % 2),
+                "player": int(samples.players[i]),
                 "turn": int(samples.turns[i]),
                 "game": int(samples.groups[i]),
                 "features": [round(float(v), 5) for v in samples.features[i]],

@@ -11,8 +11,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 # Fallbacks for datasets recorded before the header carried the layout.
-DEFAULT_GLOBAL_FEATURES = 36
+DEFAULT_GLOBAL_FEATURES = 37
 DEFAULT_CARD_FEATURES = 29
+#: encode_action(): a 9-way type one-hot plus 9 values.
+DEFAULT_ACTION_FEATURES = 18
 DEFAULT_SLOTS = {"hand": 10, "battlefield": 12, "stack": 3}
 
 #: Order of the zones inside the card-slot part of the feature vector.
@@ -28,7 +30,7 @@ class EncodingSpec:
     hand_slots: int = DEFAULT_SLOTS["hand"]
     battlefield_slots: int = DEFAULT_SLOTS["battlefield"]
     stack_slots: int = DEFAULT_SLOTS["stack"]
-    action_features: int = 19
+    action_features: int = DEFAULT_ACTION_FEATURES
     #: Index 0 is the empty slot / unknown card; the rest are card names.
     vocabulary: list[str] = field(default_factory=lambda: [""])
 
@@ -102,7 +104,7 @@ class EncodingSpec:
             hand_slots=int(slots.get("hand", DEFAULT_SLOTS["hand"])),
             battlefield_slots=int(slots.get("battlefield", DEFAULT_SLOTS["battlefield"])),
             stack_slots=int(slots.get("stack", DEFAULT_SLOTS["stack"])),
-            action_features=int(header.get("action_features", 19)),
+            action_features=int(header.get("action_features", 18)),
             vocabulary=[""],
         )
         spec.merge_vocabulary(list(header.get("vocabulary", [])))

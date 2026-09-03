@@ -37,6 +37,7 @@ class Samples:
     targets: np.ndarray       # (N,)               float32 in {0, 0.5, 1}
     turns: np.ndarray         # (N,)               int32
     groups: np.ndarray        # (N,)               int32 — game id, unique across files
+    players: np.ndarray       # (N,)               int32 — which seat was deciding
     spec: EncodingSpec
 
     def __len__(self) -> int:
@@ -50,19 +51,47 @@ class Samples:
             targets=self.targets[idx],
             turns=self.turns[idx],
             groups=self.groups[idx],
+            players=self.players[idx],
             spec=self.spec,
         )
+
+    def seat_win_rates(self) -> dict[int, float]:
+        """Fraction of games each seat won.
+
+        A value near 1.0 for one seat means the dataset is not a record of two
+        players competing — one agent is broken, or one seat keeps the
+        first-player advantage in every game.
+        """
+        # outcome is relative to whoever was deciding, so recover the winner.
+        winners: dict[int, int] = {}
+        for group, player, target in zip(self.groups, self.players, self.targets):
+            if target == 0.5:
+                winners.setdefault(int(group), -1)
+            else:
+                winners[int(group)] = int(player) if target == 1.0 else 1 - int(player)
+        total = len(winners) or 1
+        return {seat: sum(1 for w in winners.values() if w == seat) / total for seat in (0, 1)}
 
     def describe(self) -> str:
         wins = int((self.targets == 1.0).sum())
         losses = int((self.targets == 0.0).sum())
         draws = len(self) - wins - losses
-        return (
+        rates = self.seat_win_rates()
+        text = (
             f"{len(self)} decisions from {len(np.unique(self.groups))} games "
             f"({wins} win / {losses} loss / {draws} draw), "
             f"turns {int(self.turns.min())}-{int(self.turns.max())}, "
-            f"{self.spec.vocab_size - 1} distinct cards"
+            f"{self.spec.vocab_size - 1} distinct cards\n"
+            f"seat win rate: player 0 {rates[0]:.1%}, player 1 {rates[1]:.1%}"
         )
+        if max(rates.values()) >= 0.95:
+            text += (
+                "\n\nWARNING: one seat won essentially every game. There is almost no\n"
+                "informative variance here — a value network trained on it learns\n"
+                '"the seat that does things wins" and nothing about play decisions.\n'
+                "Find out why one agent is losing 100% of the time and re-record."
+            )
+        return text
 
 
 class ValueDataset(Dataset):
@@ -131,6 +160,7 @@ def load_samples(paths: Iterable[str | Path], verbose: bool = True) -> Samples:
     targets: list[float] = []
     turns: list[int] = []
     groups: list[int] = []
+    players: list[int] = []
     next_group = 0
 
     for path in files:
@@ -178,6 +208,7 @@ def load_samples(paths: Iterable[str | Path], verbose: bool = True) -> Samples:
             id_rows.append(np.array([remap.get(int(i), 0) for i in ids], dtype=np.int64))
             targets.append(OUTCOME_TO_TARGET[outcome])
             turns.append(int(sample.get("turn", 0)))
+            players.append(int(sample.get("player", 0)))
 
             # Group id: unique per (file, game) so a split never puts two
             # decisions from the same game on both sides.
@@ -200,6 +231,7 @@ def load_samples(paths: Iterable[str | Path], verbose: bool = True) -> Samples:
         targets=np.asarray(targets, dtype=np.float32),
         turns=np.asarray(turns, dtype=np.int32),
         groups=np.asarray(groups, dtype=np.int32),
+        players=np.asarray(players, dtype=np.int32),
         spec=spec,
     )
 
