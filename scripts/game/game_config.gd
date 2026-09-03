@@ -14,6 +14,9 @@ const DECK_DIR := "res://data/decks"
 const AGENT_TYPES := {
 	"heuristic": "Heuristic AI",
 	"greedy": "Greedy AI (1-ply search)",
+	"valuenet": "Value Net AI (needs mtgai.serve)",
+	"policy": "Policy AI (needs mtgai.serve --policy-checkpoint)",
+	"policysearch": "Policy + Search AI (needs mtgai.serve --policy-checkpoint)",
 	"random": "Random AI",
 }
 
@@ -26,6 +29,12 @@ func create_agent(kind: String, player_id: int) -> BaseAgent:
 	match kind:
 		"greedy":
 			return GreedyAgent.new(player_id)
+		"valuenet":
+			return ValueNetAgent.new(player_id)
+		"policy":
+			return PolicyAgent.new(player_id)
+		"policysearch":
+			return PolicySearchAgent.new(player_id)
 		"random":
 			return RandomAgent.new(player_id)
 		_:

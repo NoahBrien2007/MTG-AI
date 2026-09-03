@@ -79,7 +79,45 @@ func _run_series() -> void:
 	await get_tree().process_frame
 	CardDatabase.load_cards_from_csv()
 
+	# Probe the value net once up front. Without this a stopped server just
+	# means every ValueNetAgent silently falls back, and the series measures
+	# Greedy against Greedy while claiming to measure the model.
+	if kind_a == "policy" or kind_b == "policy":
+		var policy_health := PolicyAgent.new(0).health_check()
+		if not policy_health.get("ok", false):
+			results_label.append_text("[color=#ff8080]%s[/color]\n" % policy_health.get("error", "policy unavailable"))
+			results_label.append_text("Start it with: [code]cd ai/python && python -m mtgai.serve --policy-checkpoint checkpoints/policy_net.pt[/code]\n")
+			_running = false
+			btn_run.text = "Run"
+			btn_back.text = "Back"
+			return
+		results_label.append_text("Policy ready — %d features, %d cards.\n" % [
+			policy_health["feature_count"], policy_health["vocab_size"],
+		])
+
+	if kind_a == "valuenet" or kind_b == "valuenet":
+		var health := ValueNetAgent.new(0).health_check()
+		if not health.get("ok", false):
+			results_label.append_text("[color=#ff8080]%s[/color]\n" % health.get("error", "value net unavailable"))
+			results_label.append_text("Start it with: [code]cd ai/python && python -m mtgai.serve[/code]\n")
+			_running = false
+			btn_run.text = "Run"
+			btn_back.text = "Back"
+			return
+		results_label.append_text("Value net ready — %d features, %d cards.\n" % [
+			health["feature_count"], health["vocab_size"],
+		])
+
 	var recorder: GameRecorder = GameRecorder.new() if chk_record.button_pressed else null
+	if recorder:
+		# Stream each game to disk as it finishes. Buffering a long series in
+		# memory needs gigabytes and dies well before the last game.
+		var folder := recorder.begin_stream()
+		if folder.is_empty():
+			results_label.append_text("[color=#ff8080]Could not open the dataset folder — this run is NOT being recorded.[/color]\n")
+			recorder = null
+		else:
+			results_label.append_text("Recording to %s\n" % folder)
 	var results := MatchRunner.new_results()
 	var started := Time.get_ticks_msec()
 	for i in range(total):
@@ -88,7 +126,9 @@ func _run_series() -> void:
 			break
 		var a := GameConfig.create_agent(kind_a, 0)
 		var b := GameConfig.create_agent(kind_b, 1)
-		var final_state := MatchRunner.play_game(a, b, path_a, path_b, 3000, recorder)
+		# Alternate who is on the play, otherwise seat 0 keeps the first-player
+		# advantage in every game and both the results and the recorded data are biased.
+		var final_state := MatchRunner.play_game(a, b, path_a, path_b, 3000, recorder, 0, i % 2)
 		MatchRunner.record_result(results, final_state)
 
 		var winner := "draw"
@@ -96,7 +136,10 @@ func _run_series() -> void:
 			winner = name_a
 		elif final_state.winner_id == 1:
 			winner = name_b
-		results_label.append_text("Game %d: %d turns — %s\n" % [i + 1, final_state.turn_number, winner])
+		var on_play := name_a if final_state.starting_player == 0 else name_b
+		results_label.append_text("Game %d: %d turns — %s won (%s on the play)\n" % [
+			i + 1, final_state.turn_number, winner, on_play,
+		])
 		progress.value = i + 1
 		await get_tree().process_frame
 
@@ -105,7 +148,10 @@ func _run_series() -> void:
 	print(MatchRunner.summary_text(results, name_a, name_b))
 	if recorder and recorder.games_recorded > 0:
 		var path := recorder.save()
-		results_label.append_text("[color=#9fd3ff]Training data (%d games) saved to %s[/color]\n" % [recorder.games_recorded, path])
+		results_label.append_text("[color=#9fd3ff]Training data: %d games, %d decisions in %d file(s) under %s[/color]\n" % [
+			recorder.games_recorded, recorder.decisions_recorded, recorder.written_files.size(), path,
+		])
+		print("Training data written to %s" % path)
 
 	_running = false
 	btn_run.text = "Run"
